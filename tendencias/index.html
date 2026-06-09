@@ -35,11 +35,15 @@ table{border-collapse:collapse;width:100%;font-size:.83rem;margin-top:8px}th,td{
 .legend{background:#fff;padding:8px 10px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.2);font-size:.78rem}.legend i{display:inline-block;width:12px;height:12px;margin-right:6px;border-radius:2px}
 .note{background:#fff8f0;border:1px solid #f0d9bf;border-radius:10px;padding:14px 16px;color:#7a4a17;font-size:.86rem;margin-top:14px}
 footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
-</style></head>
+.embed .warn,.embed header,.embed .nav,.embed footer{display:none!important}
+.embed .panel>div:first-child{display:none!important}
+.embed body{background:transparent}.embed .wrap{padding-top:6px}
+</style>
+<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
+</head>
 <body>
 <div class="warn">⚠ <b>Ejercicio estadístico provisional.</b> Es una proyección de tendencias; <b>no incorpora los instrumentos de planificación territorial (planes reguladores)</b> que imponen restricciones al crecimiento, ni constituye un pronóstico oficial.</div>
 <div class="nav"><a href="index.html" class="on">👥 Tendencias demográficas</a><a href="usos.html">🏗️ Tendencias de uso de suelo</a></div>
-<script>if(new URLSearchParams(location.search).has("embed")){var _n=document.querySelector(".nav");if(_n)_n.style.display="none";}</script>
 <header><div class="wrap">
   <h1>Tendencias demográficas · 2030 / 2035</h1>
   <p class="lead w">Población, vivienda y <b>envejecimiento</b> por comuna y área metropolitana. Demografía anclada a las proyecciones del INE (comunal base 2017 corregida al techo nacional base 2024, Censo 2024). Incluye índice de envejecimiento por zona y estimación del peak poblacional. Estimaciones en revisión.</p>
@@ -209,5 +213,20 @@ function drawMap(){const mode=document.getElementById("mapsel").value;
   else d.innerHTML='<b>Año del peak poblacional</b><br><i style="background:#d73027"></i>antes de 2020<br><i style="background:#fdae61"></i>2020–2027<br><i style="background:#fee08b"></i>2028–2032<br><i style="background:#a6d96a"></i>2033–2035<br><i style="background:#1a9850"></i>posterior a 2035';
   return d;};
  legend.addTo(map);}
+</script>
+<script>
+/* Embebido en la plataforma: el menú global de ciudades manda la selección, y la página
+   reporta su alto para que el iframe fluya como una sección nativa (sin scroll interno). */
+(function(){if(!new URLSearchParams(location.search).has("embed"))return;
+ function postH(){try{parent.postMessage({__tendH:true,h:document.documentElement.scrollHeight+24},"*");}catch(e){}}
+ window.__postH=postH;
+ window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.demo)return;
+   var sel=document.getElementById("sel");
+   if(sel&&[...sel.options].some(function(o){return o.value===d.demo;}))sel.value=d.demo;
+   try{load(d.demo);}catch(err){}
+   setTimeout(postH,500);setTimeout(postH,1400);});
+ try{new ResizeObserver(postH).observe(document.body);}catch(e){}
+ window.addEventListener("load",function(){setTimeout(postH,500);setTimeout(postH,1500);});
+})();
 </script>
 </body></html>

@@ -262,6 +262,7 @@ function finishSelect(){
  document.getElementById("selctx").innerHTML=ctx;
  renderResumen(); renderOferta(); renderDinamica(); updateRegionNavActive();
  if(document.getElementById("p-ranking").classList.contains("on"))drawRanking();
+ syncTendCity();   // tendencias embebidas siguen la ciudad seleccionada
 }
 
 /* =================================================================
@@ -810,4 +811,17 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
 });
-function lazyFrame(id){const f=document.getElementById(id);if(f&&!f.src&&f.dataset.src)f.src=f.dataset.src;}
+// ---- pestañas de tendencias embebidas: ancladas al menú de ciudades ----
+function lazyFrame(id){const f=document.getElementById(id);if(!f)return;
+ if(!f.src&&f.dataset.src){f.addEventListener("load",()=>postToFrame(id));f.src=f.dataset.src;}
+ else postToFrame(id);}                                  // ya cargado -> solo sincroniza
+function tendIds(){const s=S.sel;if(!s)return null;const isMetro=s.type==="metro";
+ return {demo:isMetro?slugify(s.key):String(s.key),      // demografía: metro=slug, comuna=cut (hay para todas)
+         usos:isMetro?slugify(s.key):(s.metro?slugify(s.metro):slugify(s.name)), // uso de suelo zonal: si la comuna integra un área, usa el área
+         name:s.name};}
+function postToFrame(id){const f=document.getElementById(id);if(!f||!f.src||!f.contentWindow)return;
+ const t=tendIds();if(t)f.contentWindow.postMessage({__tend:true,demo:t.demo,usos:t.usos,name:t.name},"*");}
+function syncTendCity(){postToFrame("if-demo");postToFrame("if-suelo");}
+window.addEventListener("message",e=>{const d=e.data;if(!d||!d.__tendH)return;
+ ["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);
+   if(f&&f.contentWindow===e.source)f.style.height=Math.max(620,d.h)+"px";});});

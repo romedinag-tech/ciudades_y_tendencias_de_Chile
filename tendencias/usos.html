@@ -34,11 +34,15 @@ td.pos{color:#1a9850;font-weight:700}
 #evoPop h4{margin:0 0 4px;font-size:.84rem;color:var(--navy)}
 #evoPop .ec{position:relative;height:180px}
 footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
-</style></head>
+.embed .warn,.embed header,.embed .nav,.embed footer{display:none!important}
+.embed .panel>div:first-child{display:none!important}
+.embed body{background:transparent}.embed .wrap{padding-top:6px}
+</style>
+<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
+</head>
 <body>
 <div class="warn">⚠ <b>Ejercicio estadístico provisional.</b> Proyección de tendencias de construcción; <b>no incorpora los instrumentos de planificación territorial (planes reguladores)</b> que imponen restricciones al crecimiento, ni constituye un pronóstico oficial.</div>
 <div class="nav"><a href="index.html">👥 Tendencias demográficas</a><a href="usos.html" class="on">🏗️ Tendencias de uso de suelo</a></div>
-<script>if(new URLSearchParams(location.search).has("embed")){var _n=document.querySelector(".nav");if(_n)_n.style.display="none";}</script>
 <header><div class="wrap">
   <h1>Tendencias de uso de suelo · 2030 / 2035</h1>
   <p class="lead">Para cada ciudad/metrópolis se proyecta <b>cada uso por separado</b> (Habitacional, Comercio, Educación, Salud, Oficina, Industria) a nivel de <b>zona censal</b>, con escenarios. Mira las <b>cantidades</b> (m²) por horizonte y qué usos <b>crecen más o menos en %</b>.</p>
@@ -200,5 +204,21 @@ function moveEvo(ev){const pop=document.getElementById("evoPop");const w=pop.off
  if(y+hh>window.innerHeight-8)y=window.innerHeight-hh-8;if(y<8)y=8;
  pop.style.left=x+"px";pop.style.top=y+"px";}
 function hideEvo(){document.getElementById("evoPop").style.display="none";if(evoChart){evoChart.destroy();evoChart=null;}}
+</script>
+<script>
+/* Embebido en la plataforma: el menú global de ciudades manda la selección, y la página
+   reporta su alto para fluir como una sección nativa (sin scroll interno). */
+(function(){if(!new URLSearchParams(location.search).has("embed"))return;
+ function postH(){try{parent.postMessage({__tendH:true,h:document.documentElement.scrollHeight+24},"*");}catch(e){}}
+ window.__postH=postH;
+ window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.usos)return;
+   var slug=d.usos,ok=(typeof IDX!=="undefined"&&IDX&&IDX.ciudades.some(function(c){return c.slug===slug;}));
+   if(ok){var sel=document.getElementById("city");if(sel)sel.value=slug;try{load(slug);}catch(err){}}
+   else{document.getElementById("kpis").innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="l">Sin proyección de uso de suelo por zona para <b>'+(d.name||slug)+'</b>. Disponible en áreas metropolitanas y comunas con catastro SII.</div></div>';
+        var tb=document.getElementById("tbl");if(tb)tb.innerHTML="";var mp=document.getElementById("map");if(mp)mp.style.display="none";}
+   setTimeout(postH,500);setTimeout(postH,1400);});
+ try{new ResizeObserver(postH).observe(document.body);}catch(e){}
+ window.addEventListener("load",function(){setTimeout(postH,500);setTimeout(postH,1500);});
+})();
 </script>
 </body></html>

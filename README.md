@@ -16,8 +16,9 @@ de uso de suelo (horizontes 2030 / 2035).
 - **Tendencias de uso de suelo** — proyección de m² por uso a nivel de zona, con escenarios
   (deriva reciente robusta a proyectos atípicos).
 
-Las dos pestañas de *Tendencias* se integran embebidas desde `tendencias/` (sitio
-autocontenido que también funciona por separado).
+Las dos pestañas de *Tendencias* se integran embebidas desde `tendencias/` y quedan
+**ancladas al menú global de ciudades**: al seleccionar una comuna o área metropolitana,
+ambas se actualizan a esa unidad.
 
 ## Aviso
 
