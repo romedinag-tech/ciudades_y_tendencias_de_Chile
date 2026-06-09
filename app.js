@@ -1,0 +1,813 @@
+/* ===================================================================
+   Plataforma nacional de uso de suelo y población — Chile
+   Datos: kpis_comunas.json (345 comunas) + metro_areas.json + comunas.geojson
+   Mapas zonales / dinámica por comuna: lazy-load data/zonas|intercensal|crecimiento/<slug>.(geo)json
+   =================================================================== */
+const NAVY="#1f4e79",NAVY2="#2e5e8c",OR="#c55a11",TEAL="#21918c",GREEN="#1a9850",RED="#d73027",GREY="#9aa7b4";
+Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+Chart.defaults.color="#5b6b7b";
+if(window.ChartDataLabels){Chart.register(ChartDataLabels);Chart.defaults.plugins.datalabels.display=false;}
+
+const R={
+ YlOrRd:["#ffffb2","#fecc5c","#fd8d3c","#f03b20","#bd0026"],
+ PuBu:["#f1eef6","#bdc9e1","#74a9cf","#2b8cbe","#045a8d"],
+ Viridis:["#440154","#3b528b","#21918c","#5ec962","#fde725"],
+ Greens:["#edf8e9","#bae4b3","#74c476","#31a354","#006d2c"],
+ OrRd:["#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000"],
+ BuPu:["#edf8fb","#b3cde3","#8c96c6","#8856a7","#810f7c"],
+ RdYlGn:["#d73027","#fc8d59","#fee08b","#91cf60","#1a9850"]};
+// Nivel socioeconómico: 5 clases fijas (no quintiles dinámicos)
+const NSE_COLORS={1:"#d73027",2:"#fc8d59",3:"#fee08b",4:"#91cf60",5:"#1a9850"};
+const NSE_LABEL={1:"Bajo",2:"Medio-bajo",3:"Medio",4:"Medio-alto",5:"Alto"};
+function nseLevel(score){if(score==null)return null;const t=(S.nseMeta&&S.nseMeta.umbral_score_inicio_nivel)||{};
+ if(score>=(t["Alto"]??80))return 5; if(score>=(t["Medio-alto"]??60))return 4;
+ if(score>=(t["Medio"]??40))return 3; if(score>=(t["Medio-bajo"]??20))return 2; return 1;}
+
+/* ---------- catálogo de KPIs ----------
+   agg: 'sum' | 'wmean' | 'dens' | 'varpct'   (cómo se agrega un área metropolitana)
+   wt : campo de ponderación para wmean
+   sii: requiere catastro SII (puede venir null)
+   log: escala log para cortes de color / mapas                         */
+const KPI={
+ pob_2024:   {lbl:"Población 2024",grp:"Demografía y vivienda (Censo 2024)",u:"",dec:0,agg:"sum",sii:false,ramp:"YlOrRd",log:true},
+ var_pct:    {lbl:"Crecimiento de población 2017→2024",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"varpct",sii:false,ramp:"Greens",log:false},
+ dens_hab_ha:{lbl:"Densidad poblacional (área comunal)",grp:"Demografía y vivienda (Censo 2024)",u:"hab/ha",dec:1,agg:"dens",sii:false,ramp:"YlOrRd",log:true},
+ dens_consol:{lbl:"Densidad del sector consolidado",grp:"Demografía y vivienda (Censo 2024)",u:"hab/ha",dec:1,agg:"dens_consol",sii:false,ramp:"YlOrRd",log:true},
+ pct_depto:  {lbl:"Viviendas en departamento",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"viviendas",sii:false,ramp:"BuPu",log:false},
+ per_hog:    {lbl:"Personas por hogar",grp:"Demografía y vivienda (Censo 2024)",u:"",dec:2,agg:"wmean",wt:"hogares",sii:false,ramp:"OrRd",log:false},
+ pct_60mas:  {lbl:"Población de 60 años o más",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"OrRd",log:false},
+ pct_inmig:  {lbl:"Población inmigrante",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"BuPu",log:false},
+ escol:      {lbl:"Escolaridad promedio (18+)",grp:"Demografía y vivienda (Censo 2024)",u:"años",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"Viridis",log:false},
+ pct_hacin:  {lbl:"Viviendas hacinadas",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"viviendas",sii:false,ramp:"YlOrRd",log:false},
+ pct_arriendo:{lbl:"Hogares arrendatarios",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"hogares",sii:false,ramp:"PuBu",log:false},
+ nse_score:{lbl:"Nivel socioeconómico (índice)",grp:"Demografía y vivienda (Censo 2024)",u:"/100",dec:0,agg:"wmean",wt:"pob_2024",sii:false,ramp:"RdYlGn",log:false,nse:true},
+ pct_terciaria:{lbl:"Educación terciaria (18+)",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"Greens",log:false},
+ pct_ciuo123:{lbl:"Ocupados directivos/profesionales/técnicos",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"BuPu",log:false},
+ pct_internet:{lbl:"Viviendas con internet",grp:"Demografía y vivienda (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"viviendas",sii:false,ramp:"PuBu",log:false},
+ casen_ing_pc:{lbl:"Ingreso del hogar per cápita (mediana)",grp:"Ingreso y pobreza (CASEN 2024)",u:"CLP",dec:0,agg:"wmean",wt:"pob_2024",sii:false,ramp:"Greens",log:true},
+ casen_pobreza_pct:{lbl:"Pobreza por ingresos",grp:"Ingreso y pobreza (CASEN 2024)",u:"%",dec:1,agg:"wmean",wt:"pob_2024",sii:false,ramp:"OrRd",log:false},
+ m2_total:   {lbl:"Superficie construida total",grp:"Uso de suelo (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"Viridis",log:true},
+ m2pp_tot:   {lbl:"Suelo construido / habitante",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:1,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Viridis",log:true},
+ m2pp_hab:   {lbl:"Suelo habitacional / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:1,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
+ m2pp_comercio:{lbl:"Comercio / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"OrRd",log:true},
+ m2pp_educacion:{lbl:"Educación y cultura / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"BuPu",log:true},
+ m2pp_salud: {lbl:"Salud / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"YlOrRd",log:true},
+ m2pp_oficina:{lbl:"Oficina / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"PuBu",log:true},
+ m2pp_industria:{lbl:"Industria / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"OrRd",log:true},
+ m2pp_deporte:{lbl:"Deporte y recreación / hab.",grp:"Uso de suelo (Catastro SII)",u:"m²/hab",dec:2,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
+ pct_8pisos: {lbl:"Predios de 8+ pisos (verticalización)",grp:"Uso de suelo (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"n_predios",sii:true,ramp:"BuPu",log:false},
+ ratio_depto_casa:{lbl:"Ratio departamento ÷ casa (construido)",grp:"Uso de suelo (Catastro SII)",u:"",dec:2,agg:"wmean",wt:"n_predios",sii:true,ramp:"PuBu",log:false},
+ anio_mediano:{lbl:"Antigüedad — año de construcción mediano",grp:"Uso de suelo (Catastro SII)",u:"",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"OrRd",log:false},
+ valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true}
+};
+// indicadores que existen a nivel zona censal (para el módulo Oferta)
+const ZKEYS=["nse_score","dens_hab_ha","pct_depto","per_hog","pct_60mas","pct_inmig","escol","pct_hacin","pct_arriendo",
+ "m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_industria","m2pp_deporte"];
+
+/* ---------- estado global ---------- */
+const S={kpis:[],byCut:{},metros:{},comunasGeo:null,natAgg:{},natMed:{},sel:null,
+ zonasCache:{},interCache:{},crecCache:{}};
+// slugs con mapa zonal (Oferta) y con crecimiento. Se pueblan desde los manifiestos
+// data/zonas_index.json y data/crecimiento_index.json (9 áreas + comunas individuales).
+// GC se incluye por defecto como fallback si el manifiesto no carga.
+const HAS_ZONAL={"gran_concepcion":1};
+const HAS_CREC={"gran_concepcion":1};
+// intercensal por zona (toggle "Por zona"): sólo donde el geojson trae vpct/pob17 (de momento GC)
+const HAS_ZONAL_INTER={"gran_concepcion":1};
+// cobertura zonal (comunas omitidas por falta de catastro enriquecido)
+let ZCOV={};
+
+/* ---------- utilidades ---------- */
+// loader tolerante: Python escribe NaN/Infinity (no válidos en JSON) → null
+function getJSON(url){return fetch(url).then(r=>r.text())
+ .then(t=>JSON.parse(t.replace(/\bNaN\b/g,"null").replace(/-?\bInfinity\b/g,"null")));}
+const num=x=>x==null||!isFinite(x)?null:x;
+function fmt(x,d){if(x==null||!isFinite(x))return "s/d";
+ return x.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtKpi(k,x){if(x==null||!isFinite(x))return "s/d";const m=KPI[k];
+ if(k==="anio_mediano")return String(Math.round(x));
+ let s=fmt(x,m.dec); if(m.u==="%")s+="%"; else if(m.u)s+=" "+m.u; return s;}
+function sg(v){return (v>=0?"+":"")+v;}
+function slugify(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+ .replace(/\([^)]*\)/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");}
+
+/* ---------- agregación de un conjunto de comunas ---------- */
+function aggregate(rows,k){const m=KPI[k];
+ if(m.agg==="sum"){let s=0,any=false;rows.forEach(r=>{if(num(r[k])!=null){s+=r[k];any=true;}});return any?s:null;}
+ if(m.agg==="varpct"){let a=0,p=0;rows.forEach(r=>{if(num(r.var_abs)!=null&&num(r.pob_2017)){a+=r.var_abs;p+=r.pob_2017;}});return p>0?100*a/p:null;}
+ if(m.agg==="dens"){let P=0,A=0;rows.forEach(r=>{if(num(r.dens_hab_ha)>0&&num(r.pob_2024)>0){P+=r.pob_2024;A+=r.pob_2024/r.dens_hab_ha;}});return A>0?P/A:null;}
+ if(m.agg==="dens_consol"){let P=0,A=0;rows.forEach(r=>{if(num(r.pob_consol)>0&&num(r.area_consol)>0){P+=r.pob_consol;A+=r.area_consol;}});return A>0?P/A:null;}
+ // wmean
+ let nu=0,de=0;rows.forEach(r=>{const v=num(r[k]),w=num(r[m.wt]);if(v!=null&&w>0){nu+=v*w;de+=w;}});
+ return de>0?nu/de:null;}
+function median(arr){const v=arr.filter(x=>x!=null&&isFinite(x)).sort((a,b)=>a-b);
+ if(!v.length)return null;const i=Math.floor(v.length/2);return v.length%2?v[i]:(v[i-1]+v[i])/2;}
+
+/* ---------- selección: comuna o metro ---------- */
+function selectComuna(cut){const r=S.byCut[cut];if(!r)return;
+ S.sel={type:"comuna",key:cut,name:titleCase(r.comuna),cuts:[cut],rows:[r],region:r.region,metro:r.metro};
+ finishSelect();}
+function selectMetro(name){const cuts=S.metros[name]||[];const rows=cuts.map(c=>S.byCut[c]).filter(Boolean);
+ if(!rows.length)return;
+ S.sel={type:"metro",key:name,name:name,cuts:rows.map(r=>r.cut),rows:rows,region:rows[0].region,metro:name};
+ finishSelect();}
+// comunas del "grupo" para las barras comparativas (área, o región si es comuna suelta)
+function groupRows(){const s=S.sel;
+ if(s.type==="metro")return s.rows;
+ if(s.metro&&S.metros[s.metro])return S.metros[s.metro].map(c=>S.byCut[c]).filter(Boolean);
+ return S.kpis.filter(r=>r.region===s.region);}
+function groupLabel(){const s=S.sel;
+ if(s.type==="metro")return "área metropolitana";
+ if(s.metro)return s.metro; return "Región "+titleCase(s.region);}
+// agregado del grupo seleccionado (para la ficha)
+function selAgg(k){return aggregate(S.sel.rows,k);}
+// info NSE de un conjunto de comunas: score ponderado por población -> nivel/label
+function nseInfo(rows){const s=aggregate(rows,"nse_score");if(s==null)return null;
+ const n=nseLevel(s);return {score:s,nivel:n,label:NSE_LABEL[n]};}
+function dataSlug(){const s=S.sel;
+ if(s.type==="metro")return slugify(s.key);
+ // comuna dentro de un metro con datos → usa el metro
+ if(s.metro&&HAS_ZONAL[slugify(s.metro)])return slugify(s.metro);
+ return "c"+s.key;}
+
+function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-záéíóúñü])/g,(m,p,c)=>p+c.toUpperCase());}
+
+/* =================================================================
+   CARGA INICIAL
+   ================================================================= */
+Promise.all([
+ getJSON("data/kpis_comunas.json"),
+ getJSON("data/metro_areas.json"),
+ getJSON("data/comunas.geojson"),
+ getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
+ getJSON("data/crecimiento_index.json").catch(()=>({slugs:[]})),
+ getJSON("data/ranking_growth.json").catch(()=>({})),
+ getJSON("data/intercensal_index.json").catch(()=>({slugs:[]}))
+]).then(([kp,ma,geo,zi,ci,rg,ii])=>{
+ S.kpis=kp.comunas; S.metros=ma.metros; S.comunasGeo=geo; S.rg=rg||{}; S.nseMeta=(kp.meta&&kp.meta.nse)||null;
+ (zi.slugs||[]).forEach(s=>HAS_ZONAL[s]=1);
+ (ci.slugs||[]).forEach(s=>HAS_CREC[s]=1);
+ (ii.slugs||[]).forEach(s=>HAS_ZONAL_INTER[s]=1);
+ S.kpis.forEach(r=>S.byCut[r.cut]=r);
+ // estadísticas nacionales (promedio del país agregando todas las comunas, y mediana entre comunas)
+ Object.keys(KPI).forEach(k=>{S.natAgg[k]=aggregate(S.kpis,k);S.natMed[k]=median(S.kpis.map(r=>num(r[k])));});
+ const nSii=S.kpis.filter(r=>num(r.m2_total)!=null).length;
+ document.getElementById("htag").textContent=S.kpis.length+" comunas · "+Object.keys(S.metros).length+" áreas metropolitanas · "+nSii+" con catastro SII";
+ document.getElementById("nt-sii").textContent=nSii;
+ buildSelector(); buildComparador(); buildRegionNav(); buildRanking();
+ // cobertura zonal (no bloquea; sólo para la nota de comunas omitidas)
+ getJSON("data/zonas_cobertura.json").then(c=>{ZCOV=c;}).catch(()=>{});
+ // selección inicial: Gran Concepción
+ selectMetro("Gran Concepción");
+}).catch(e=>{document.body.insertAdjacentHTML("afterbegin",
+ '<div class="loading">No se pudieron cargar los datos: '+e+'</div>');});
+
+/* =================================================================
+   SELECTOR (buscador comuna / área)
+   ================================================================= */
+function selectorOptions(){
+ const opts=[];
+ Object.keys(S.metros).forEach(n=>{const rows=S.metros[n].map(c=>S.byCut[c]).filter(Boolean);
+  opts.push({kind:"metro",key:n,label:n,sub:rows.length+" comunas",region:rows[0]?titleCase(rows[0].region):"",metro:true});});
+ S.kpis.forEach(r=>opts.push({kind:"comuna",key:r.cut,label:titleCase(r.comuna),sub:titleCase(r.region),region:titleCase(r.region)}));
+ return opts;
+}
+function buildSelector(){
+ const box=document.getElementById("cbox"),list=document.getElementById("clist");
+ const ALL=selectorOptions();let hi=-1,shown=[];
+ function render(q){q=(q||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  shown=ALL.filter(o=>(o.label+" "+o.sub).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q));
+  const metros=shown.filter(o=>o.kind==="metro"),comunas=shown.filter(o=>o.kind==="comuna").slice(0,120);
+  let h="";
+  if(metros.length){h+='<div class="grouphd">Áreas metropolitanas</div>';
+   metros.forEach(o=>h+=optHtml(o));}
+  if(comunas.length){h+='<div class="grouphd">Comunas</div>';comunas.forEach(o=>h+=optHtml(o));}
+  if(!shown.length)h='<div class="opt">Sin resultados</div>';
+  list.innerHTML=h;list.style.display="block";hi=-1;
+  shown=metros.concat(comunas);
+  [...list.querySelectorAll(".opt")].forEach((el,i)=>{el.onclick=()=>pick(shown[i]);});}
+ function optHtml(o){return '<div class="opt"><span>'+o.label+(o.metro?' <span class="badge">Metro</span>':"")+
+   '</span><span class="rg">'+o.sub+'</span></div>';}
+ function pick(o){if(!o)return;box.value=o.label;list.style.display="none";
+  if(o.kind==="metro")selectMetro(o.key);else selectComuna(o.key);}
+ box.addEventListener("focus",()=>render(box.value));
+ box.addEventListener("input",()=>render(box.value));
+ box.addEventListener("keydown",e=>{const els=list.querySelectorAll(".opt");
+  if(e.key==="ArrowDown"){hi=Math.min(hi+1,shown.length-1);}
+  else if(e.key==="ArrowUp"){hi=Math.max(hi-1,0);}
+  else if(e.key==="Enter"){if(hi>=0)pick(shown[hi]);else if(shown.length)pick(shown[0]);return;}
+  else return;
+  e.preventDefault();els.forEach((el,i)=>el.classList.toggle("hi",i===hi));
+  if(els[hi])els[hi].scrollIntoView({block:"nearest"});});
+ document.addEventListener("click",e=>{if(!e.target.closest(".field"))list.style.display="none";});
+}
+
+/* =================================================================
+   MENÚ LATERAL POR REGIÓN (norte → sur)
+   ================================================================= */
+const GEO=[15,1,2,3,4,5,13,6,7,16,8,9,14,10,11,12];
+function buildRegionNav(){
+ const list=document.getElementById("rn-list");if(!list)return;
+ const byReg={};
+ S.kpis.forEach(r=>{(byReg[r.region_cod]=byReg[r.region_cod]||{name:titleCase(r.region),comunas:[]}).comunas.push(r);});
+ const metrosByReg={};
+ Object.keys(S.metros).forEach(mn=>{const first=S.metros[mn].map(c=>S.byCut[c]).filter(Boolean)[0];
+  if(first)(metrosByReg[first.region_cod]=metrosByReg[first.region_cod]||[]).push(mn);});
+ const order=Object.keys(byReg).sort((a,b)=>{
+  let ra=GEO.indexOf(parseInt(a,10)),rb=GEO.indexOf(parseInt(b,10));
+  return (ra<0?99:ra)-(rb<0?99:rb);});
+ let h="";
+ order.forEach(rc=>{const reg=byReg[rc];
+  const comunas=[...reg.comunas].sort((a,b)=>(b.pob_2024||0)-(a.pob_2024||0));
+  let inner="";
+  (metrosByReg[rc]||[]).forEach(mn=>{inner+='<button class="metro" data-selkey="m:'+mn+'" data-metro="'+encodeURIComponent(mn)+'">'+
+    '<span>'+mn+'<span class="mbadge">Área</span></span></button>';});
+  comunas.forEach(r=>{inner+='<button data-selkey="c:'+r.cut+'" data-cut="'+r.cut+'">'+
+    '<span>'+titleCase(r.comuna)+'</span><span class="pob">'+(r.pob_2024?Math.round(r.pob_2024/1000)+'k hab':'')+'</span></button>';});
+  h+='<div class="rn-region" data-reg="'+rc+'"><div class="rn-head"><span class="rt"><span class="chev">▶</span>'+reg.name+
+     '</span><span class="cnt">'+comunas.length+'</span></div><div class="rn-comunas">'+inner+'</div></div>';});
+ list.innerHTML=h;
+ // acordeón: una región abierta a la vez
+ list.querySelectorAll(".rn-region").forEach(rg=>{
+  rg.querySelector(".rn-head").onclick=()=>{const open=rg.classList.contains("open");
+   list.querySelectorAll(".rn-region").forEach(x=>x.classList.remove("open"));
+   if(!open)rg.classList.add("open");};});
+ // selección de comuna/área
+ list.querySelectorAll(".rn-comunas button").forEach(b=>{b.onclick=()=>{
+  const m=b.getAttribute("data-metro");
+  if(m)selectMetro(decodeURIComponent(m));else selectComuna(b.getAttribute("data-cut"));
+  if(window.innerWidth<=900)document.getElementById("regionnav").classList.add("collapsed");
+  window.scrollTo({top:0,behavior:"smooth"});};});
+ const tg=document.getElementById("sbToggle");
+ if(tg)tg.onclick=()=>document.getElementById("regionnav").classList.toggle("collapsed");
+}
+function updateRegionNavActive(){const list=document.getElementById("rn-list");if(!list||!S.sel)return;
+ const key=S.sel.type==="metro"?("m:"+S.sel.key):("c:"+S.sel.key);
+ list.querySelectorAll(".rn-comunas button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-selkey")===key));
+ const active=list.querySelector(".rn-comunas button.on");
+ if(active){const rg=active.closest(".rn-region");
+  if(rg&&!rg.classList.contains("open")){list.querySelectorAll(".rn-region").forEach(x=>x.classList.remove("open"));rg.classList.add("open");}
+  active.scrollIntoView({block:"nearest"});}
+}
+
+/* =================================================================
+   despues de seleccionar → refrescar todo
+   ================================================================= */
+function finishSelect(){
+ const s=S.sel;document.getElementById("cbox").value=s.name;
+ // contexto
+ let ctx="";
+ if(s.type==="metro")ctx='<b>'+s.name+'</b> · '+s.cuts.length+' comunas · '+titleCase(s.region);
+ else ctx='<b>'+s.name+'</b> · '+titleCase(s.region)+(s.metro?' · pertenece a '+s.metro:'');
+ document.getElementById("selctx").innerHTML=ctx;
+ renderResumen(); renderOferta(); renderDinamica(); updateRegionNavActive();
+ if(document.getElementById("p-ranking").classList.contains("on"))drawRanking();
+}
+
+/* =================================================================
+   TAB 1 · RESUMEN
+   ================================================================= */
+// polaridad: dónde "más es mejor" (verde si > nacional) o "menos es mejor" (verde si < nacional). Resto = neutro (gris).
+const POS_HI=new Set(["escol","pct_terciaria","pct_ciuo123","pct_internet","casen_ing_pc","nse_score",
+ "m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_deporte"]);
+const POS_LO=new Set(["pct_hacin","casen_pobreza_pct"]);
+function kpiCard(k,extraClass){const v=selAgg(k);const m=KPI[k];
+ let cls="v",sub="";
+ if(k==="var_pct"&&v!=null){cls+=v>=0?" green":" red";sub='<div class="s">'+sg(fmt(v,1))+'% vs Censo 2017</div>';}
+ const nat=S.natAgg[k];
+ if(!sub&&nat!=null&&v!=null&&k!=="anio_mediano"){
+  const above=(v-nat)>=0;const arrow=above?"▲":"▼";
+  let color=GREY;                                    // neutro: solo informa arriba/abajo
+  if(POS_HI.has(k))color=above?GREEN:RED;            // más es mejor
+  else if(POS_LO.has(k))color=above?RED:GREEN;       // menos es mejor
+  sub='<div class="s" style="color:'+color+'">'+arrow+' '+fmt(Math.abs(v-nat),m.dec)+(m.u==="%"?"%":"")+' vs nacional</div>';}
+ return '<div class="kpi"><div class="'+cls+'">'+(k==="var_pct"&&v!=null?sg(fmt(v,1))+"%":fmtKpi(k,v))+
+   '</div><div class="l">'+m.lbl+(m.u&&m.u!=="%"?" ("+m.u+")":"")+'</div>'+sub+'</div>';}
+function renderResumen(){const s=S.sel;
+ document.getElementById("res-title").innerHTML=s.name+'<span class="bar"></span>';
+ const pob=selAgg("pob_2024"),vp=selAgg("var_pct"),m2=selAgg("m2_total");
+ const hasSii=s.rows.some(r=>num(r.m2_total)!=null);
+ let lead=s.type==="metro"
+  ? 'Área metropolitana de <b>'+s.cuts.length+' comunas</b>, '+fmt(pob,0)+' habitantes (2024). Los indicadores agregan las comunas del área.'
+  : 'Comuna de la '+titleCase(s.region)+', '+fmt(pob,0)+' habitantes (2024)'+(s.metro?', parte del '+s.metro:'')+'.';
+ if(vp!=null)lead+=' Población '+(vp>=0?'creció':'cayó')+' <b style="color:'+(vp>=0?GREEN:RED)+'">'+sg(fmt(vp,1))+'%</b> entre censos.';
+ if(!hasSii)lead+=' <b>Sin catastro SII enriquecido</b>: se muestran solo indicadores censales.';
+ document.getElementById("res-lead").innerHTML=lead;
+ const demog=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","per_hog","pct_60mas","pct_inmig","escol","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo"];
+ // tarjeta NSE destacada (nivel coloreado + score)
+ const nse=nseInfo(s.rows);
+ let nseCard="";
+ if(nse){nseCard='<div class="kpi" style="border-left:5px solid '+NSE_COLORS[nse.nivel]+'">'+
+   '<div class="v" style="color:'+NSE_COLORS[nse.nivel]+'">'+nse.label+'</div>'+
+   '<div class="l">Nivel socioeconómico (índice '+Math.round(nse.score)+'/100)</div>'+
+   '<div class="s" style="color:'+NSE_COLORS[nse.nivel]+'">quintil de ingreso (CASEN 2024)</div></div>';}
+ const casen=["casen_ing_pc","casen_pobreza_pct"];
+ const sii=["m2_total","m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_industria","m2pp_deporte","pct_8pisos","ratio_depto_casa","anio_mediano","valor_suelo_med"];
+ let h='<div class="grp-hd">Demografía y vivienda (Censo 2024)</div><div class="kpis">'+nseCard+demog.map(k=>kpiCard(k)).join("")+'</div>';
+ h+='<div class="grp-hd">Ingreso y pobreza (CASEN 2024)</div><div class="kpis">'+casen.map(k=>kpiCard(k)).join("")+'</div>';
+ if(hasSii)h+='<div class="grp-hd">Uso de suelo — uso efectivo (Catastro SII)</div><div class="kpis">'+sii.map(k=>kpiCard(k)).join("")+'</div>';
+ document.getElementById("res-kpis").innerHTML=h;
+}
+
+/* =================================================================
+   TAB 2 · OFERTA DE SERVICIOS POR HABITANTE (mapa zonal)
+   ================================================================= */
+let zMap=null,zLayer=null,zLegend=null,zInfo=null,zCur="dens_hab_ha",zFeats=[],zComp=null;
+function ensureZMap(){if(zMap)return;
+ zMap=L.map("z-map",{preferCanvas:false}).setView([-36.86,-73.03],11);
+ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(zMap);
+ zInfo=L.control({position:"topright"});
+ zInfo.onAdd=function(){this._d=L.DomUtil.create("div","info");this.update();return this._d;};
+ zInfo.update=function(p,m){if(!p){this._d.innerHTML="<b>Pasa el cursor</b><br>sobre una zona";return;}
+  const meta=KPI[m];this._d.innerHTML="<b>Zona "+p.zona+"</b> · "+titleCase(p.comuna)+"<br>Pob: "+fmt(p.pob,0)+
+   "<br>"+meta.lbl+":<br><b>"+fmtKpi(m,p[m])+"</b>";};
+ zInfo.addTo(zMap);
+ // dropdown
+ const sel=document.getElementById("z-sel");const groups={};
+ ZKEYS.forEach(k=>{(groups[KPI[k].grp]=groups[KPI[k].grp]||[]).push(k);});
+ let h="";Object.entries(groups).forEach(([g,arr])=>{h+='<optgroup label="'+g+'">'+
+  arr.map(k=>'<option value="'+k+'">'+KPI[k].lbl+'</option>').join("")+'</optgroup>';});
+ sel.innerHTML=h;sel.value=zCur;sel.onchange=()=>zDraw(sel.value);
+ document.getElementById("z-note").innerHTML='<b>Cómo leer estos mapas:</b> las zonas censales son urbanas; las áreas rurales no tienen zona y quedan fuera. La disponibilidad de suelo (m²/hab) es uso <b>efectivo</b> del SII, no normativo. Los cortes de color son por quintiles (escala logarítmica en densidad y m²/hab). Zonas con población ≈0 aparecen como "sin dato".';
+}
+function quant(vals,log){let v=vals.filter(x=>x!=null&&isFinite(x)&&(!log||x>0)).sort((a,b)=>a-b);
+ if(!v.length)return [0,0,0,0,0];const q=p=>v[Math.min(v.length-1,Math.floor(p*(v.length-1)))];
+ return [q(.2),q(.4),q(.6),q(.8),q(.92)];}
+function colorFor(x,brk,cols,log){if(x==null||!isFinite(x)||(log&&x<=0))return "#d8dde3";
+ for(let i=0;i<brk.length;i++)if(x<=brk[i])return cols[i];return cols[cols.length-1];}
+function zDraw(m){zCur=m;const meta=KPI[m],cols=R[meta.ramp];
+ const isNse=!!meta.nse;  // NSE por zona: color por nivel (5 clases fijas)
+ const vals=zFeats.map(f=>f.properties[m]);const brk=quant(vals,meta.log);
+ const fillFor=p=>isNse?(p.nse_nivel?NSE_COLORS[p.nse_nivel]:"#d8dde3"):colorFor(p[m],brk,cols,meta.log);
+ if(zLayer)zMap.removeLayer(zLayer);
+ zLayer=L.geoJSON({type:"FeatureCollection",features:zFeats},{
+  style:f=>({color:"#5b6b7b",weight:.5,fillColor:fillFor(f.properties),fillOpacity:.78}),
+  onEachFeature:(f,l)=>{const p=f.properties;
+   l.on("mouseover",()=>{l.setStyle({weight:2,color:"#1f4e79"});zInfo.update(p,m);});
+   l.on("mouseout",()=>{l.setStyle({weight:.5,color:"#5b6b7b"});zInfo.update();});
+   const val=isNse?(p.nse_nivel?NSE_LABEL[p.nse_nivel]+' · score '+Math.round(p.nse_score):'s/d'):fmtKpi(m,p[m]);
+   l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>Población: '+fmt(p.pob,0)+
+     '<br><b>'+meta.lbl+': '+val+'</b>');}
+ }).addTo(zMap);
+ if(zLegend)zMap.removeControl(zLegend);
+ zLegend=L.control({position:"bottomright"});
+ zLegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");let h;
+  if(isNse){h='<b>Nivel socioeconómico</b><br>';for(let i=5;i>=1;i--)h+='<i style="background:'+NSE_COLORS[i]+'"></i>'+NSE_LABEL[i]+'<br>';h+='<i style="background:#d8dde3"></i>sin dato';}
+  else{h='<b>'+meta.lbl+'</b>'+(meta.u?' ('+meta.u+')':"")+'<br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],meta.dec)+'<br>';
+   for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],meta.dec)+' – '+fmt(brk[i],meta.dec)+'<br>';
+   h+='<i style="background:'+cols[4]+'"></i>> '+fmt(brk[4],meta.dec)+'<br><i style="background:#d8dde3"></i>sin dato';}
+  d.innerHTML=h;return d;};
+ zLegend.addTo(zMap);
+ document.getElementById("z-desc").innerHTML="<b>"+meta.lbl+"</b>";
+ document.getElementById("z-sel").value=m;
+ zComparison(m);
+ setTimeout(()=>zMap.invalidateSize(),60);
+}
+// barras: comunas del grupo + promedio nacional, para el indicador del mapa
+function zComparison(m){const meta=KPI[m];
+ const rows=groupRows().map(r=>[titleCase(r.comuna),num(r[m])]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
+ const nat=S.natAgg[m];
+ const labels=rows.map(r=>r[0]).concat(["▸ Promedio nacional"]);
+ const data=rows.map(r=>Math.round(r[1]*100)/100).concat([nat!=null?Math.round(nat*100)/100:null]);
+ const colors=rows.map(()=>R[meta.ramp][3]).concat([OR]);
+ if(zComp)zComp.destroy();
+ zComp=new Chart(document.getElementById("z-ccomp"),{type:"bar",
+  data:{labels,datasets:[{data,backgroundColor:colors}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},
+   tooltip:{callbacks:{label:c=>fmtKpi(m,c.parsed.x)}}},
+   scales:{x:{title:{display:true,text:meta.lbl+(meta.u?" ("+meta.u+")":"")}}}}});
+ document.getElementById("z-cct").textContent="Comparación por comuna — "+meta.lbl;
+ document.getElementById("z-ccs").innerHTML="El indicador agregado por comuna del grupo ("+groupLabel()+"). <b style='color:"+OR+"'>La barra naranja es el promedio nacional.</b>";
+}
+function renderOferta(){const slug=dataSlug();
+ const mapEl=document.getElementById("z-map"),emptyEl=document.getElementById("z-empty");
+ const panel=document.querySelector("#p-oferta .panelctrl"),box=document.querySelector("#p-oferta .chartbox"),note=document.getElementById("z-note");
+ if(!HAS_ZONAL[slug]){
+  mapEl.style.display="none";note.style.display="none";panel.style.display="none";box.style.display="none";
+  emptyEl.style.display="block";
+  emptyEl.innerHTML="<b>Mapa zonal en preparación para "+S.sel.name+".</b><br>"+
+   "El detalle intra-ciudad por zona censal se genera con el pipeline espacial (catastro SII + cartografía censal). "+
+   "Por ahora está disponible para el <b>Gran Concepción</b>. Mientras tanto, usa la pestaña <b>Comparar ciudades</b> y el <b>Resumen</b> para los indicadores a nivel comunal.";
+  return;}
+ mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
+ ensureZMap();zOmitNote(slug);
+ if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
+ getJSON("data/zonas/"+slug+".geojson").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+}
+// nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
+function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
+ if(!el)return;
+ if(!cov){el.style.display="none";return;}
+ const om=(cov.omitidas||[]).map(o=>o.comuna);
+ let h="";
+ if(om.length)h+="<b>Comunas omitidas</b> (sin catastro enriquecido con coordenadas, no aparecen en el mapa): "+om.join(", ")+". ";
+ if(cov.pct_asignado!=null)h+=(h?" ":"")+"<b>"+cov.pct_asignado+"%</b> de los m² del área quedaron asignados a una zona (el resto es rural o quedó fuera del límite zonal).";
+ el.style.display=h?"block":"none";el.innerHTML=h;}
+function afterZonas(){zDraw(zCur);if(zLayer)zMap.fitBounds(zLayer.getBounds(),{padding:[10,10]});}
+
+/* =================================================================
+   TAB 3 · DINÁMICA (intercensal + crecimiento)
+   ================================================================= */
+let iMap=null,imLayer=null,imLegend=null,imPanel=null,imChart=null,iMode="com",iData={};
+const fmtN=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
+function colC(v){if(v==null)return "#d8dde3";
+ if(v<=-5)return "#d73027"; if(v<0)return "#fc8d59"; if(v<5)return "#fee08b";
+ if(v<10)return "#a6d96a"; if(v<15)return "#66bd63"; return "#1a9850";}
+function ensureIMap(){if(iMap)return;
+ iMap=L.map("d-imap",{preferCanvas:false}).setView([-36.86,-73.03],11);
+ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(iMap);
+ document.getElementById("d-bt-com").onclick=()=>setIMode("com");
+ document.getElementById("d-bt-zon").onclick=()=>setIMode("zon");
+}
+function imClear(){if(imLayer){iMap.removeLayer(imLayer);imLayer=null;}
+ if(imLegend){iMap.removeControl(imLegend);imLegend=null;}
+ if(imPanel){iMap.removeControl(imPanel);imPanel=null;}}
+function legendPct(){const lg=L.control({position:"bottomright"});
+ lg.onAdd=()=>{const d=L.DomUtil.create("div","legend");
+  d.innerHTML='<b>Variación 2017→2024 (%)</b><br>'+
+  '<i style="background:#d73027"></i>≤ -5%<br><i style="background:#fc8d59"></i>-5 a 0%<br>'+
+  '<i style="background:#fee08b"></i>0 a 5%<br><i style="background:#a6d96a"></i>5 a 10%<br>'+
+  '<i style="background:#66bd63"></i>10 a 15%<br><i style="background:#1a9850"></i>&gt; 15%';return d;};
+ return lg;}
+// geojson de comunas del grupo (recorta el nacional)
+function groupComunasGeo(){const cuts=new Set(groupRows().map(r=>String(r.cut)));
+ return {type:"FeatureCollection",features:S.comunasGeo.features.filter(f=>cuts.has(String(f.properties.cut)))
+  .map(f=>{const r=S.byCut[f.properties.cut];return {type:"Feature",geometry:f.geometry,
+   properties:{cut:f.properties.cut,comuna:titleCase(f.properties.comuna),
+    pob17:r?r.pob_2017:null,pob24:r?r.pob_2024:null,dpob:r?r.var_abs:null,vpct:r?r.var_pct:null}};})};}
+// gráfico inferior: SIEMPRE comparación intercensal entre comunas del grupo
+function comunaInterChart(){const feats=iData.com.features;
+ if(imChart)imChart.destroy();
+ const ord=[...feats].sort((a,b)=>(b.properties.vpct??-1e9)-(a.properties.vpct??-1e9));
+ imChart=new Chart(document.getElementById("d-cint"),{type:"bar",
+  data:{labels:ord.map(f=>f.properties.comuna),
+   datasets:[{data:ord.map(f=>f.properties.vpct),backgroundColor:ord.map(f=>f.properties.vpct>=0?GREEN:RED)}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:c=>{const p=ord[c.dataIndex].properties;
+      return sg(fmt(p.vpct,1))+"% ("+sg(fmtN(p.dpob))+" hab) · "+fmtN(p.pob17)+"→"+fmtN(p.pob24);}}}},
+    scales:{x:{title:{display:true,text:"variación % de población 2017→2024"}}}}});
+ document.getElementById("d-cint-title").textContent="Variación intercensal de población por comuna ("+groupLabel()+")";
+ document.getElementById("d-cint-sub").textContent="Comparación entre las comunas del grupo sobre los totales censales oficiales.";}
+function renderComuna(){imClear();const feats=iData.com.features;
+ imLayer=L.geoJSON(iData.com,{
+  style:f=>({color:"#fff",weight:1,fillColor:colC(f.properties.vpct),fillOpacity:.82}),
+  onEachFeature:(f,l)=>{const p=f.properties;
+    l.on("mouseover",()=>l.setStyle({weight:2.5,color:"#1f4e79"}));
+    l.on("mouseout",()=>l.setStyle({weight:1,color:"#fff"}));
+    l.bindTooltip(p.comuna+": "+sg(fmt(p.vpct,1))+"%",{sticky:true});
+    l.bindPopup('<b>'+p.comuna+'</b><br>Población 2017: '+fmtN(p.pob17)+'<br>Población 2024: '+fmtN(p.pob24)+
+      '<br><b>Variación: '+sg(fmtN(p.dpob))+' hab ('+sg(fmt(p.vpct,1))+'%)</b>');}
+ }).addTo(iMap);
+ iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});
+ imLegend=legendPct();imLegend.addTo(iMap);
+ comunaInterChart();document.getElementById("d-inote").style.display="none";
+ setTimeout(()=>iMap.invalidateSize(),60);}
+function renderZona(){imClear();const feats=iData.zon.features;
+ imLayer=L.geoJSON(iData.zon,{
+  style:f=>({color:"#5b6b7b",weight:.5,fillColor:colC(f.properties.vpct),fillOpacity:.8}),
+  onEachFeature:(f,l)=>{const p=f.properties;
+    l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+    l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+    l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>Pob. consolidada 2017: '+fmtN(p.pob17)+
+      '<br>2024: '+fmtN(p.pob24i)+'<br><b>'+sg(fmtN(p.dpob))+' hab ('+(p.vpct==null?'s/d':sg(fmt(p.vpct,1))+'%')+')</b>');}
+ }).addTo(iMap);
+ iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});
+ imLegend=legendPct();imLegend.addTo(iMap);
+ comunaInterChart();
+ const nt=document.getElementById("d-inote");nt.style.display="block";
+ nt.innerHTML='<b>Ojo:</b> esta vista compara solo las <b>manzanas presentes en ambos censos</b> (núcleo consolidado). No incluye las <b>manzanas nuevas</b>, donde ocurre buena parte del crecimiento de comunas en expansión; por eso un casco antiguo puede aparecer rojo aunque la comuna crezca. Para el dato oficial usa <b>Por comuna (%)</b>.';
+ setTimeout(()=>iMap.invalidateSize(),60);}
+function setIMode(m){iMode=m;
+ document.getElementById("d-bt-com").classList.toggle("on",m==="com");
+ document.getElementById("d-bt-zon").classList.toggle("on",m==="zon");
+ if(m==="com")renderComuna();
+ else{if(iData.zon)renderZona();else{ // sin zonas: vuelve a comuna
+  document.getElementById("d-bt-zon").classList.remove("on");
+  document.getElementById("d-bt-com").classList.add("on");renderComuna();}}}
+function renderDinamica(){ensureIMap();
+ iData.com=groupComunasGeo();
+ const slug=dataSlug();
+ // botón "por zona" solo si el geojson zonal trae variación intercensal (vpct/pob17)
+ const hasZon=!!HAS_ZONAL_INTER[slug];
+ document.getElementById("d-bt-zon").style.display=hasZon?"":"none";
+ if(hasZon&&S.interCache[slug]){iData.zon=S.interCache[slug];}
+ else iData.zon=null;
+ setIMode("com");
+ if(hasZon&&!S.interCache[slug]){
+  getJSON("data/zonas/"+slug+".geojson").then(g=>{
+   S.interCache[slug]=g; iData.zon=g; });}
+ renderCrecimiento(slug);
+}
+/* ---- gráficos de crecimiento (lazy crecimiento/<slug>.json) ---- */
+let cg1=null,cg2=null,cg3=null,cg3b=null;
+function renderCrecimiento(slug){
+ const wrap=document.getElementById("d-growth"),empty=document.getElementById("d-growth-empty");
+ if(!HAS_CREC[slug]){wrap.style.display="none";empty.style.display="block";
+  empty.innerHTML="<b>Análisis temporal en preparación para "+S.sel.name+".</b><br>Las series de construcción por año (personas vs. m², casa/depto, densificación/expansión) se generan con el pipeline SII por comuna. Disponible para el <b>Gran Concepción</b>.";return;}
+ wrap.style.display="";empty.style.display="none";
+ if(S.crecCache[slug]){drawCrec(S.crecCache[slug]);return;}
+ getJSON("data/crecimiento/"+slug+".json").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
+}
+function drawCrec(D){
+ // C1 índice base 2017
+ const an=D.ej1_personas_vs_m2.stock_m2_por_anio.anios,st=D.ej1_personas_vs_m2.stock_m2_por_anio.stock;
+ const i17=an.indexOf(2017),base=st[i17];
+ const m2idx=st.map((x,i)=>(an[i]>2024)?null:Math.round(1000*x/base)/10);
+ const pob={};pob[2017]=100;pob[2024]=Math.round(1000*D.ej1_personas_vs_m2.pob_2024/D.ej1_personas_vs_m2.pob_2017)/10;
+ const pobd=an.map(y=>y in pob?pob[y]:null);
+ if(cg1)cg1.destroy();
+ cg1=new Chart(document.getElementById("d-c1"),{type:"line",data:{labels:an,datasets:[
+   {label:"m² construidos (índice)",data:m2idx,borderColor:OR,backgroundColor:OR,tension:.25,pointRadius:0,borderWidth:3,spanGaps:true},
+   {label:"Población (índice)",data:pobd,borderColor:NAVY,backgroundColor:NAVY,pointRadius:6,pointHoverRadius:7,showLine:true,borderWidth:2,borderDash:[6,4],spanGaps:true}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
+   tooltip:{callbacks:{label:c=>c.dataset.label+": "+c.parsed.y+" (base 2017=100)"}}},
+   scales:{y:{title:{display:true,text:"Índice (2017 = 100)"}}}}});
+ // C2 casas vs deptos
+ const cd=D.ej5_casa_depto;
+ const rdc=cd.map(x=>x.casas>0?x.deptos/x.casas:null).filter(v=>v!=null);
+ const avgR=rdc.reduce((a,b)=>a+b,0)/rdc.length;
+ const clas=avgR>1.25?"Densificación":(avgR<0.75?"Extensión":"Mixta");
+ const clasCol=clas==="Densificación"?GREEN:(clas==="Extensión"?OR:NAVY2);
+ if(cg2)cg2.destroy();
+ cg2=new Chart(document.getElementById("d-c2"),{data:{labels:cd.map(x=>x.anio),datasets:[
+   {type:"bar",label:"Casas (1–2 pisos)",data:cd.map(x=>x.casas),backgroundColor:NAVY,order:2},
+   {type:"bar",label:"Departamentos (3+ pisos)",data:cd.map(x=>x.deptos),backgroundColor:OR,order:2},
+   {type:"line",label:"Ratio depto ÷ casa",data:cd.map(x=>x.casas>0?Math.round(100*x.deptos/x.casas)/100:null),borderColor:TEAL,backgroundColor:TEAL,yAxisID:"y2",tension:.25,pointRadius:4,borderWidth:2,order:1,datalabels:{display:false}}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},
+   scales:{y:{title:{display:true,text:"unidades nuevas"}},
+     y2:{position:"right",grid:{drawOnChartArea:false},title:{display:true,text:"ratio depto/casa"},suggestedMin:0,suggestedMax:2}}}});
+ document.getElementById("d-cdbox").innerHTML='<b>Dinámica:</b> ratio promedio <b>departamentos ÷ casas = '+avgR.toFixed(2).replace(".",",")+'</b> → <b style="color:'+clasCol+'">'+clas+'</b>. <b>Criterio:</b> &gt;1,25 densificación · &lt;0,75 extensión · 0,75–1,25 mixta.';
+ // C3 expansion/densif por año
+ const ed=D.ej6_expansion_densidad.filter(x=>x.densificacion+x.expansion>0);
+ if(cg3)cg3.destroy();
+ cg3=new Chart(document.getElementById("d-c3"),{data:{labels:ed.map(x=>x.anio),datasets:[
+   {type:"bar",label:"Densificación (m²)",data:ed.map(x=>x.densificacion),backgroundColor:NAVY,stack:"s"},
+   {type:"bar",label:"Expansión (m²)",data:ed.map(x=>x.expansion),backgroundColor:OR,stack:"s"},
+   {type:"line",label:"% densificación",data:ed.map(x=>x.pct_densif),borderColor:TEAL,backgroundColor:TEAL,yAxisID:"y2",tension:.25,pointRadius:4,borderWidth:2,datalabels:{display:false}}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
+   datalabels:{display:ctx=>ctx.dataset.type==="bar",color:"#fff",font:{size:10,weight:"bold"},
+     formatter:(v,ctx)=>{const e=ed[ctx.dataIndex];const tot=e.densificacion+e.expansion;return tot&&v/tot>=0.06?Math.round(100*v/tot)+"%":"";}}},
+   scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:"m² nuevos"}},
+     y2:{position:"right",grid:{drawOnChartArea:false},min:0,max:100,title:{display:true,text:"% densif."}}}}});
+ // C3b dona
+ const t=D.ej6_totales;const tt=t.densificacion+t.expansion;
+ if(cg3b)cg3b.destroy();
+ cg3b=new Chart(document.getElementById("d-c3b"),{type:"doughnut",data:{labels:["Densificación","Expansión"],
+   datasets:[{data:[t.densificacion,t.expansion],backgroundColor:[NAVY,OR],borderWidth:2,borderColor:"#fff"}]},
+  options:{maintainAspectRatio:false,cutout:"58%",plugins:{legend:{position:"bottom"},
+    datalabels:{display:true,color:"#fff",font:{size:16,weight:"bold"},formatter:v=>Math.round(100*v/tt)+"%"},
+    tooltip:{callbacks:{label:c=>c.label+": "+(c.parsed/1e6).toFixed(1)+"M m² ("+Math.round(100*c.parsed/tt)+"%)"}}}}});
+}
+
+/* =================================================================
+   TAB 4 · COMPARAR CIUDADES
+   ================================================================= */
+const CMP={items:[],kpi:"m2pp_comercio",kx:"dens_hab_ha",ky:"m2pp_comercio",map:null,layer:null,legend:null,rank:null,scatter:null};
+function cmpEntity(o){ // o = {kind,key}
+ if(o.kind==="metro"){const rows=S.metros[o.key].map(c=>S.byCut[c]).filter(Boolean);
+  return {id:"m:"+o.key,name:o.key,kind:"metro",cuts:rows.map(r=>r.cut),rows};}
+ const r=S.byCut[o.key];return {id:"c:"+o.key,name:titleCase(r.comuna),kind:"comuna",cuts:[r.cut],rows:[r]};}
+function cmpVal(it,k){return aggregate(it.rows,k);}
+function buildComparador(){
+ // selects de KPI
+ const fill=sel=>{const groups={};Object.keys(KPI).forEach(k=>{(groups[KPI[k].grp]=groups[KPI[k].grp]||[]).push(k);});
+  sel.innerHTML=Object.entries(groups).map(([g,arr])=>'<optgroup label="'+g+'">'+
+   arr.map(k=>'<option value="'+k+'">'+KPI[k].lbl+'</option>').join("")+'</optgroup>').join("");};
+ const kx=document.getElementById("cmp-kx"),ky=document.getElementById("cmp-ky");
+ fill(kx);fill(ky);
+ kx.value=CMP.kx;ky.value=CMP.ky;
+ kx.onchange=()=>{CMP.kx=kx.value;cmpScatter();};
+ ky.onchange=()=>{CMP.ky=ky.value;cmpScatter();cmpMapDraw();};   // el eje Y también define el color del mapa
+ // buscador agregar
+ const box=document.getElementById("cmp-add"),list=document.getElementById("alist");
+ const ALL=selectorOptions();let hi=-1,shown=[];
+ function render(q){q=(q||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  shown=ALL.filter(o=>(o.label+" "+o.sub).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q)).slice(0,80);
+  list.innerHTML=shown.map(o=>'<div class="opt"><span>'+o.label+(o.metro?' ·metro':'')+'</span><span class="rg">'+o.sub+'</span></div>').join("")||'<div class="opt">Sin resultados</div>';
+  list.style.display="block";hi=-1;
+  [...list.querySelectorAll(".opt")].forEach((el,i)=>el.onclick=()=>add(shown[i]));}
+ function add(o){if(!o)return;const it=cmpEntity({kind:o.kind,key:o.key});
+  if(!CMP.items.find(x=>x.id===it.id))CMP.items.push(it);
+  box.value="";list.style.display="none";cmpRefresh();}
+ box.addEventListener("focus",()=>render(box.value));
+ box.addEventListener("input",()=>render(box.value));
+ box.addEventListener("keydown",e=>{const els=list.querySelectorAll(".opt");
+  if(e.key==="ArrowDown")hi=Math.min(hi+1,shown.length-1);
+  else if(e.key==="ArrowUp")hi=Math.max(hi-1,0);
+  else if(e.key==="Enter"){if(hi>=0)add(shown[hi]);else if(shown.length)add(shown[0]);return;}
+  else return;e.preventDefault();els.forEach((el,i)=>el.classList.toggle("hi",i===hi));});
+ document.addEventListener("click",e=>{if(!e.target.closest(".addrow .field"))list.style.display="none";});
+ // selección inicial: Gran Concepción + Gran Santiago + Gran Valparaíso
+ ["Gran Concepción","Gran Santiago","Gran Valparaíso"].forEach(n=>{if(S.metros[n])CMP.items.push(cmpEntity({kind:"metro",key:n}));});
+ cmpRefresh();
+}
+function cmpRefresh(){
+ // chips
+ document.getElementById("cmp-chips").innerHTML=CMP.items.map(it=>
+  '<div class="chip"><b>'+it.name+'</b><span data-id="'+it.id+'">✕</span></div>').join("")||'<span style="color:#5b6b7b;font-size:.85rem">Agrega ciudades para comparar.</span>';
+ document.querySelectorAll("#cmp-chips .chip span").forEach(s=>s.onclick=()=>{
+  CMP.items=CMP.items.filter(x=>x.id!==s.getAttribute("data-id"));cmpRefresh();});
+ cmpTable();cmpScatter();cmpMapDraw();
+}
+const CMP_ROWS=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","per_hog","pct_60mas","escol",
+ "nse_score","casen_ing_pc","casen_pobreza_pct","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo",
+ "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med"];
+function cmpTable(){const w=document.getElementById("cmp-tablewrap");
+ if(!CMP.items.length){w.innerHTML='<div class="loading">Sin ciudades seleccionadas.</div>';return;}
+ let h='<table><thead><tr><th>Indicador</th>'+CMP.items.map(it=>'<th>'+it.name+'</th>').join("")+
+   '<th>Promedio nac.</th><th>Mediana nac.</th></tr></thead><tbody>';
+ // fila titular NSE: nivel con badge de color
+ h+='<tr><td>Nivel socioeconómico</td>'+CMP.items.map(it=>{const ni=nseInfo(it.rows);
+   return '<td>'+(ni?'<span style="background:'+NSE_COLORS[ni.nivel]+';color:#fff;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:700">'+ni.label+'</span>':'s/d')+'</td>';}).join("")+
+   '<td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">—</td></tr>';
+ CMP_ROWS.forEach(k=>{const m=KPI[k];
+  const vals=CMP.items.map(it=>cmpVal(it,k));
+  const valid=vals.filter(v=>v!=null);
+  const hi=valid.length?Math.max(...valid):null,lo=valid.length?Math.min(...valid):null;
+  // mejor/peor solo en indicadores con polaridad clara (verde=mejor, rojo=peor); el resto sin color
+  const best=POS_HI.has(k)?hi:(POS_LO.has(k)?lo:null), worst=POS_HI.has(k)?lo:(POS_LO.has(k)?hi:null);
+  h+='<tr><td>'+m.lbl+(m.u&&m.u!=="%"?" <span style=\"color:#9aa7b4\">("+m.u+")</span>":"")+'</td>';
+  vals.forEach(v=>{let c="";if(CMP.items.length>1&&v!=null){if(best!=null&&v===best)c=" class=best";else if(worst!=null&&v===worst)c=" class=worst";}
+   h+='<td'+c+'>'+fmtKpi(k,v)+'</td>';});
+  h+='<td style="color:#9aa7b4">'+fmtKpi(k,S.natAgg[k])+'</td>'+
+     '<td style="color:#9aa7b4">'+fmtKpi(k,S.natMed[k])+'</td></tr>';});
+ h+='</tbody></table>';w.innerHTML=h;
+}
+function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
+ const selCuts=new Set(CMP.items.flatMap(it=>it.cuts.map(String)));
+ const base=[],selPts=[];
+ S.kpis.forEach(r=>{const x=num(r[kx]),y=num(r[ky]);if(x==null||y==null)return;
+  const pt={x,y,name:titleCase(r.comuna)};
+  if(selCuts.has(String(r.cut)))selPts.push(pt);else base.push(pt);});
+ if(CMP.scatter)CMP.scatter.destroy();
+ CMP.scatter=new Chart(document.getElementById("cmp-scatter"),{type:"scatter",
+  data:{datasets:[
+   {label:"Comunas",data:base,backgroundColor:"rgba(154,167,180,.5)",pointRadius:3},
+   {label:"Seleccionadas",data:selPts,backgroundColor:OR,pointRadius:6,pointHoverRadius:8}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
+    tooltip:{callbacks:{label:c=>c.raw.name+": ("+fmt(c.raw.x,mx.dec)+(mx.u?" "+mx.u:"")+", "+fmt(c.raw.y,my.dec)+(my.u?" "+my.u:"")+")"}}},
+    scales:{x:{type:mx.log?"logarithmic":"linear",title:{display:true,text:mx.lbl+(mx.u?" ("+mx.u+")":"")}},
+            y:{type:my.log?"logarithmic":"linear",title:{display:true,text:my.lbl+(my.u?" ("+my.u+")":"")}}}}});
+ document.getElementById("cmp-sc-title").textContent="Dispersión — "+my.lbl+" vs "+mx.lbl;
+ document.getElementById("cmp-sc-sub").innerHTML="Cada punto es una comuna; en <b style='color:"+OR+"'>naranja</b> las seleccionadas.";
+}
+function ensureCmpMap(){if(CMP.map)return;
+ CMP.map=L.map("cmp-map",{preferCanvas:true}).setView([-38,-72],5);
+ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(CMP.map);
+}
+function cmpMapDraw(){ensureCmpMap();const k=CMP.ky,m=KPI[k],cols=R[m.ramp];
+ const isNse=!!m.nse;  // NSE: colorear por nivel (5 clases fijas)
+ const vals=S.kpis.map(r=>num(r[k]));const brk=quant(vals,m.log);
+ const selCuts=new Set(CMP.items.flatMap(it=>it.cuts.map(String)));
+ const fillFor=r=>isNse?(r&&r.nse_nivel?NSE_COLORS[r.nse_nivel]:"#d8dde3"):colorFor(r?num(r[k]):null,brk,cols,m.log);
+ if(CMP.layer)CMP.map.removeLayer(CMP.layer);
+ CMP.layer=L.geoJSON(S.comunasGeo,{
+  style:f=>{const r=S.byCut[f.properties.cut];
+   const onSel=selCuts.has(String(f.properties.cut));
+   return {color:onSel?"#1f4e79":"#9aa7b4",weight:onSel?2.2:.3,fillColor:fillFor(r),fillOpacity:.82};},
+  onEachFeature:(f,l)=>{const r=S.byCut[f.properties.cut];const v=r?num(r[k]):null;
+   const extra=isNse&&r&&r.nse_nivel?'<br><b>'+NSE_LABEL[r.nse_nivel]+'</b> · score '+Math.round(r.nse_score):'';
+   l.bindPopup('<b>'+titleCase(f.properties.comuna)+'</b><br>'+m.lbl+': <b>'+fmtKpi(k,v)+'</b>'+extra);
+   l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+   l.on("mouseout",()=>l.setStyle({weight:selCuts.has(String(f.properties.cut))?2.2:.3,color:selCuts.has(String(f.properties.cut))?"#1f4e79":"#9aa7b4"}));}
+ }).addTo(CMP.map);
+ if(CMP.legend)CMP.map.removeControl(CMP.legend);
+ CMP.legend=L.control({position:"bottomright"});
+ CMP.legend.onAdd=()=>{const d=L.DomUtil.create("div","legend");let h;
+  if(isNse){h='<b>Nivel socioeconómico</b><br>';for(let i=5;i>=1;i--)h+='<i style="background:'+NSE_COLORS[i]+'"></i>'+NSE_LABEL[i]+'<br>';h+='<i style="background:#d8dde3"></i>sin dato';}
+  else{h='<b>'+m.lbl+'</b>'+(m.u?' ('+m.u+')':"")+'<br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],m.dec)+'<br>';
+   for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],m.dec)+' – '+fmt(brk[i],m.dec)+'<br>';
+   h+='<i style="background:'+cols[4]+'"></i>> '+fmt(brk[4],m.dec)+'<br><i style="background:#d8dde3"></i>sin dato';}
+  d.innerHTML=h;return d;};
+ CMP.legend.addTo(CMP.map);
+ document.getElementById("cmp-map-title").textContent="Mapa nacional por comuna — "+m.lbl;
+ setTimeout(()=>CMP.map.invalidateSize(),60);
+}
+
+/* =================================================================
+   TAB 5 · RANKING NACIONAL
+   ================================================================= */
+const RANKDIMS=[
+ {g:"Demografía y población",k:"pct_60mas",src:"k",dir:"desc",lbl:"Más población mayor (60+ años)"},
+ {g:"Demografía y población",k:"pct_60mas",src:"k",dir:"asc",lbl:"Ciudades más jóvenes (menor 60+)"},
+ {g:"Demografía y población",k:"var_pct",src:"k",dir:"desc",lbl:"Mayor crecimiento de población 2017→2024"},
+ {g:"Demografía y población",k:"var_pct",src:"k",dir:"asc",lbl:"Mayor pérdida de población"},
+ {g:"Demografía y población",k:"dens_consol",src:"k",dir:"desc",lbl:"Mayor densidad (sector consolidado)"},
+ {g:"Demografía y población",k:"dens_hab_ha",src:"k",dir:"desc",lbl:"Mayor densidad (área comunal completa)"},
+ {g:"Demografía y población",k:"nse_score",src:"k",dir:"desc",lbl:"Mayor nivel socioeconómico"},
+ {g:"Demografía y población",k:"nse_score",src:"k",dir:"asc",lbl:"Menor nivel socioeconómico"},
+ {g:"Ingreso y pobreza (CASEN)",k:"casen_ing_pc",src:"k",dir:"desc",lbl:"Mayor ingreso per cápita (CASEN)"},
+ {g:"Ingreso y pobreza (CASEN)",k:"casen_ing_pc",src:"k",dir:"asc",lbl:"Menor ingreso per cápita (CASEN)"},
+ {g:"Ingreso y pobreza (CASEN)",k:"casen_pobreza_pct",src:"k",dir:"desc",lbl:"Mayor pobreza por ingresos (CASEN)"},
+ {g:"Ingreso y pobreza (CASEN)",k:"casen_pobreza_pct",src:"k",dir:"asc",lbl:"Menor pobreza por ingresos (CASEN)"},
+ {g:"Demografía y población",k:"pct_terciaria",src:"k",dir:"desc",lbl:"Mayor educación terciaria"},
+ {g:"Demografía y población",k:"pct_inmig",src:"k",dir:"desc",lbl:"Mayor población inmigrante"},
+ {g:"Demografía y población",k:"escol",src:"k",dir:"desc",lbl:"Mayor escolaridad"},
+ {g:"Demografía y población",k:"escol",src:"k",dir:"asc",lbl:"Menor escolaridad"},
+ {g:"Vivienda",k:"pct_depto",src:"k",dir:"desc",lbl:"Más viviendas en departamento"},
+ {g:"Vivienda",k:"pct_hacin",src:"k",dir:"desc",lbl:"Más hacinamiento"},
+ {g:"Vivienda",k:"pct_arriendo",src:"k",dir:"desc",lbl:"Más hogares arrendatarios"},
+ {g:"Uso de suelo y servicios",k:"m2pp_comercio",src:"k",dir:"desc",lbl:"Mejor disponibilidad de comercio"},
+ {g:"Uso de suelo y servicios",k:"m2pp_comercio",src:"k",dir:"asc",lbl:"Peor disponibilidad de comercio"},
+ {g:"Uso de suelo y servicios",k:"m2pp_salud",src:"k",dir:"desc",lbl:"Mejor disponibilidad de salud"},
+ {g:"Uso de suelo y servicios",k:"m2pp_educacion",src:"k",dir:"desc",lbl:"Mejor disponibilidad de educación"},
+ {g:"Uso de suelo y servicios",k:"m2pp_deporte",src:"k",dir:"desc",lbl:"Mejor disponibilidad de deporte y recreación"},
+ {g:"Uso de suelo y servicios",k:"m2pp_tot",src:"k",dir:"desc",lbl:"Más suelo construido por habitante"},
+ {g:"Uso de suelo y servicios",k:"pct_8pisos",src:"k",dir:"desc",lbl:"Más verticalizadas (predios 8+ pisos)"},
+ {g:"Uso de suelo y servicios",k:"valor_suelo_med",src:"k",dir:"desc",lbl:"Suelo más caro"},
+ {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"desc",lbl:"Parque construido más nuevo"},
+ {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"asc",lbl:"Parque construido más antiguo"},
+ {g:"Dinámica de crecimiento",k:"crec_m2",src:"g",dir:"desc",lbl:"Mayor crecimiento urbano (m² construidos)"},
+ {g:"Dinámica de crecimiento",k:"pct_densif",src:"g",dir:"desc",lbl:"Se densifican más (crecen sobre sí mismas)"},
+ {g:"Dinámica de crecimiento",k:"pct_densif",src:"g",dir:"asc",lbl:"Se expanden más rápido (hacia los bordes)"},
+];
+let rkChart=null;
+function rkMeta(d){
+ if(d.src==="k")return {dec:KPI[d.k].dec,u:KPI[d.k].u,lbl2:KPI[d.k].lbl};
+ if(d.k==="crec_m2")return {dec:1,u:"%",lbl2:"crecimiento de m² construidos 2017→2024"};
+ return {dec:1,u:"%",lbl2:"% de m² nuevos en densificación (2016–2025)"};
+}
+function rkValue(o,d){
+ if(d.src==="k")return d.scopeArea?aggregate(o.rows,d.k):num(o.r[d.k]);
+ const key=d.scopeArea?o.slug:("c"+o.r.cut);
+ const g=(S.rg||{})[key]; return g?num(g[d.k]):null;
+}
+function buildRanking(){
+ const sel=document.getElementById("rk-dim");
+ const groups={};RANKDIMS.forEach((d,i)=>{(groups[d.g]=groups[d.g]||[]).push([i,d.lbl]);});
+ sel.innerHTML=Object.entries(groups).map(([g,arr])=>'<optgroup label="'+g+'">'+
+  arr.map(([i,l])=>'<option value="'+i+'">'+l+'</option>').join("")+'</optgroup>').join("");
+ const rsel=document.getElementById("rk-region");
+ const regs={};S.kpis.forEach(r=>regs[r.region_cod]=titleCase(r.region));
+ const G=[15,1,2,3,4,5,13,6,7,16,8,9,14,10,11,12];
+ const order=Object.keys(regs).sort((a,b)=>(G.indexOf(+a)<0?99:G.indexOf(+a))-(G.indexOf(+b)<0?99:G.indexOf(+b)));
+ rsel.innerHTML='<option value="">Todo Chile</option>'+order.map(c=>'<option value="'+c+'">'+regs[c]+'</option>').join("");
+ ["rk-dim","rk-scope","rk-region","rk-minpob","rk-top"].forEach(id=>document.getElementById(id).onchange=drawRanking);
+}
+function drawRanking(){
+ if(!S.kpis.length)return;
+ const d={...RANKDIMS[+document.getElementById("rk-dim").value]};
+ d.scopeArea=document.getElementById("rk-scope").value==="area";
+ const reg=document.getElementById("rk-region").value;
+ const minpob=+document.getElementById("rk-minpob").value;
+ const topN=+document.getElementById("rk-top").value;
+ const meta=rkMeta(d);
+ document.getElementById("rk-region").disabled=d.scopeArea;
+ let rows=[];
+ if(d.scopeArea){
+  Object.keys(S.metros).forEach(mn=>{const mr=S.metros[mn].map(c=>S.byCut[c]).filter(Boolean);
+   if(mr.length)rows.push({name:mn,slug:slugify(mn),rows:mr,isArea:true,key:"m:"+mn,pob:aggregate(mr,"pob_2024")});});
+ }else{
+  S.kpis.forEach(r=>{if(reg&&r.region_cod!==reg)return; if((r.pob_2024||0)<minpob)return;
+   rows.push({name:titleCase(r.comuna),r:r,key:"c:"+r.cut,pob:r.pob_2024});});
+ }
+ rows.forEach(o=>o.v=rkValue(o,d));
+ rows=rows.filter(o=>o.v!=null).sort((a,b)=>d.dir==="asc"?a.v-b.v:b.v-a.v);
+ const total=rows.length;
+ const selKey=S.sel?(S.sel.type==="metro"?"m:"+S.sel.key:"c:"+S.sel.key):null;
+ const selIdx=rows.findIndex(o=>o.key===selKey);
+ const show=rows.slice(0,topN);
+ if(selIdx>=topN)show.push(rows[selIdx]);
+ const labels=show.map(o=>(rows.indexOf(o)+1)+". "+o.name);
+ const data=show.map(o=>Math.round(o.v*100)/100);
+ const colors=show.map(o=>o.key===selKey?OR:NAVY);
+ const wrap=document.getElementById("rk-wrap");wrap.style.height=Math.max(260,show.length*23+70)+"px";
+ if(rkChart)rkChart.destroy();
+ rkChart=new Chart(document.getElementById("rk-chart"),{type:"bar",
+  data:{labels,datasets:[{data,backgroundColor:colors}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},
+   tooltip:{callbacks:{label:c=>{const o=show[c.dataIndex];return o.name+": "+fmt(c.parsed.x,meta.dec)+(meta.u==="%"?"%":(meta.u?" "+meta.u:""))+(o.pob?"  ("+fmt(o.pob,0)+" hab)":"");}}}},
+   onClick:(ev,els)=>{if(!els.length)return;const o=show[els[0].index];o.isArea?selectMetro(o.name):selectComuna(o.r.cut);},
+   scales:{x:{title:{display:true,text:meta.lbl2+(meta.u&&meta.u!=="%"?" ("+meta.u+")":"")}}}}});
+ document.getElementById("rk-title").textContent=d.lbl+(d.scopeArea?" — áreas metropolitanas":"");
+ let sub=total+(d.scopeArea?" áreas":" comunas")+" en el ranking";
+ if(reg&&!d.scopeArea)sub+=" · "+document.getElementById("rk-region").selectedOptions[0].textContent;
+ if(minpob&&!d.scopeArea)sub+=" · ≥ "+fmt(minpob,0)+" hab";
+ if(selIdx>=0)sub+=" · "+S.sel.name+" va en el puesto "+(selIdx+1)+" de "+total;
+ document.getElementById("rk-sub").textContent=sub;
+ const isPC=["m2pp_comercio","m2pp_salud","m2pp_educacion","m2pp_deporte","m2pp_tot"].includes(d.k);
+ document.getElementById("rk-desc").innerHTML="<b>"+meta.lbl2+".</b> "+
+  (d.src==="g"?"Calculado desde el catastro SII (año de construcción); disponible para las comunas con catastro enriquecido.":
+   (isPC?"m² construidos de ese uso ÷ población de la comuna. En comunas pequeñas el cociente puede inflarse (el catastro cubre mucho suelo para poca gente) — usa el filtro de <b>población mínima</b>.":
+    "Fuente: Censo INE 2024 / Catastro SII."));
+}
+
+/* =================================================================
+   TABS
+   ================================================================= */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ const t=b.dataset.tab;
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+ document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t));
+ // refrescar mapas al hacerse visibles
+ if(t==="oferta"&&zMap)setTimeout(()=>{zMap.invalidateSize();if(zLayer)zMap.fitBounds(zLayer.getBounds(),{padding:[10,10]});},60);
+ if(t==="dinamica"&&iMap)setTimeout(()=>{iMap.invalidateSize();if(imLayer)iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});},60);
+ if(t==="comparar"){cmpMapDraw();}
+ if(t==="ranking")drawRanking();
+ if(t==="tend-demo")lazyFrame("if-demo");
+ if(t==="tend-suelo")lazyFrame("if-suelo");
+});
+function lazyFrame(id){const f=document.getElementById(id);if(f&&!f.src&&f.dataset.src)f.src=f.dataset.src;}

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Uso de Suelo y Población · Chile · Comunas y Áreas Metropolitanas</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+:root{--navy:#1f4e79;--navy2:#2e5e8c;--or:#c55a11;--teal:#21918c;--green:#1a9850;--red:#d73027;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+header{background:linear-gradient(135deg,#1f4e79,#2e5e8c);color:#fff;padding:34px 22px 26px}
+.wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+header h1{margin:0 0 6px;font-size:1.75rem;font-weight:800;letter-spacing:-.5px}
+header p{margin:3px 0;opacity:.92;font-size:.95rem}
+.tag{display:inline-block;background:rgba(255,255,255,.16);padding:4px 12px;border-radius:20px;font-size:.78rem;margin-top:8px}
+/* ---- selector ---- */
+.selbar{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:16px 18px;margin-top:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.selbar .field{position:relative;flex:1;min-width:280px}
+.selbar label{display:block;font-size:.75rem;color:rgba(255,255,255,.85);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+#cbox{width:100%;font-size:1.05rem;padding:11px 14px;border:none;border-radius:9px;background:#fff;color:var(--ink);font-weight:600}
+#clist{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(8,18,33,.25);max-height:340px;overflow:auto;z-index:1200;display:none}
+#clist .opt{padding:9px 14px;cursor:pointer;font-size:.92rem;display:flex;justify-content:space-between;gap:10px;align-items:center}
+#clist .opt:hover,#clist .opt.hi{background:#eef3f9}
+#clist .opt .rg{color:var(--mut);font-size:.78rem}
+#clist .opt .badge{background:var(--or);color:#fff;font-size:.66rem;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+#clist .grouphd{padding:8px 14px 4px;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:700;background:#f7f9fc;position:sticky;top:0}
+.selbar .ctxt{color:rgba(255,255,255,.92);font-size:.84rem;min-width:200px;flex:1.2}
+.selbar .ctxt b{color:#fff}
+/* ---- tabs ---- */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 auto;max-width:1140px;padding:0 20px;position:sticky;top:0;background:var(--bg);z-index:1000;border-bottom:1px solid var(--line)}
+.tabs button{border:none;background:none;padding:15px 18px;cursor:pointer;font-size:.95rem;font-weight:700;color:var(--mut);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--navy);border-bottom-color:var(--or)}
+.tabs button:hover{color:var(--navy)}
+/* ---- layout con menú lateral de regiones ---- */
+.layout{display:flex;max-width:1340px;margin:0 auto;align-items:flex-start}
+.sidebar{width:256px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:14px 8px 30px}
+.sidebar .sb-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:700;padding:4px 10px 10px}
+.rn-region{border-bottom:1px solid #eef2f6}
+.rn-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;font-size:.87rem;font-weight:600;color:var(--navy);border-radius:8px}
+.rn-head:hover{background:#eef3f9}
+.rn-head .rt{display:flex;align-items:center;gap:7px}
+.rn-head .chev{color:var(--mut);transition:transform .15s;font-size:.65rem}
+.rn-head .cnt{color:var(--mut);font-weight:600;font-size:.72rem;background:#eef2f6;border-radius:10px;padding:1px 8px}
+.rn-region.open>.rn-head{color:var(--or)}
+.rn-region.open>.rn-head .chev{transform:rotate(90deg)}
+.rn-comunas{display:none;padding:2px 0 8px}
+.rn-region.open>.rn-comunas{display:block}
+.rn-comunas button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;padding:6px 12px 6px 18px;cursor:pointer;font-size:.83rem;color:var(--ink);border-radius:7px}
+.rn-comunas button:hover{background:#f3f7fb;color:var(--navy)}
+.rn-comunas button.on{background:var(--navy);color:#fff}
+.rn-comunas button .pob{color:var(--mut);font-size:.71rem;white-space:nowrap}
+.rn-comunas button.on .pob{color:rgba(255,255,255,.82)}
+.rn-comunas button.metro{font-weight:700}
+.rn-comunas .mbadge{font-size:.58rem;background:var(--or);color:#fff;padding:1px 6px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px}
+.rn-comunas button.on .mbadge{background:#fff;color:var(--or)}
+.content{flex:1;min-width:0}
+.content .tabs{max-width:none}
+.content main.wrap,.content section.wrap{max-width:none}
+.sb-toggle{display:none;margin:14px 0 0;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);color:#fff;padding:9px 14px;border-radius:9px;font-weight:600;font-size:.9rem;cursor:pointer;width:100%}
+@media(max-width:900px){
+  .layout{flex-direction:column}
+  .sidebar{width:auto;position:static;max-height:none;border-right:none;border-bottom:1px solid var(--line)}
+  .sidebar.collapsed{display:none}
+  .sb-toggle{display:block}
+}
+main{min-height:60vh}
+.panel{display:none;padding:30px 0}
+.panel.on{display:block}
+.tendframe{width:100%;height:calc(100vh - 130px);min-height:740px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:8px}
+h2{color:var(--navy);font-size:1.4rem;margin:0 0 6px}
+h2 .bar{display:block;width:54px;height:4px;background:var(--or);border-radius:3px;margin-top:8px}
+h3{color:var(--navy)}
+.lead{color:var(--mut);max-width:880px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:15px;margin-top:22px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(20,40,80,.04)}
+.kpi .v{font-size:1.7rem;font-weight:800;color:var(--navy);line-height:1.1}
+.kpi .v.or{color:var(--or)}
+.kpi .v.green{color:var(--green)} .kpi .v.red{color:var(--red)}
+.kpi .l{color:var(--mut);font-size:.8rem;margin-top:5px}
+.kpi .s{color:var(--or);font-weight:700;font-size:.85rem;margin-top:2px}
+.grp-hd{margin:30px 0 0;font-size:1.05rem;color:var(--navy);font-weight:700;border-left:4px solid var(--or);padding-left:10px}
+.chartbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:18px;box-shadow:0 2px 10px rgba(20,40,80,.04)}
+.chartbox h3{margin:0 0 2px;font-size:1.05rem}
+.chartbox p{margin:0 0 10px;color:var(--mut);font-size:.86rem}
+.cwrap{position:relative;height:360px}
+.two{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+.panelctrl{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.panelctrl label{display:block;font-size:.74rem;color:var(--mut);margin-bottom:4px;font-weight:600}
+.panelctrl select{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:8px;background:#fff;color:var(--ink);min-width:260px}
+.panelctrl .desc{font-size:.84rem;color:var(--mut);flex:1;min-width:220px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.ctrl button{border:1px solid var(--navy);background:#fff;color:var(--navy);padding:8px 16px;border-radius:22px;cursor:pointer;font-weight:600;font-size:.9rem}
+.ctrl button.on{background:var(--navy);color:#fff}
+.map{height:580px;border-radius:14px;border:1px solid var(--line);margin-top:16px;z-index:0}
+.legend{background:#fff;padding:9px 11px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.2);font-size:.8rem;line-height:1.55}
+.legend i{display:inline-block;width:13px;height:13px;margin-right:6px;border-radius:2px;vertical-align:-2px}
+.legend b{color:var(--navy)}
+.info{background:#fff;padding:9px 11px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.2);font-size:.82rem;min-width:170px}
+.info b{color:var(--navy)}
+.note{background:#fff8f0;border:1px solid #f0d9bf;border-radius:12px;padding:16px 18px;color:#7a4a17;font-size:.88rem;margin-top:18px}
+.empty{background:#fff;border:1px dashed #c7d2de;border-radius:14px;padding:40px 22px;text-align:center;color:var(--mut);margin-top:18px}
+.empty b{color:var(--navy)}
+/* ---- comparador ---- */
+.cmp-pick{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{background:var(--navy);color:#fff;border-radius:20px;padding:5px 12px;font-size:.85rem;display:flex;align-items:center;gap:7px}
+.chip b{font-weight:700}
+.chip span{cursor:pointer;opacity:.8;font-weight:700}
+.chip span:hover{opacity:1}
+.addrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}
+.addrow .field{position:relative;flex:1;min-width:240px}
+.addrow input{width:100%;font-size:.95rem;padding:9px 12px;border:1px solid #c7d2de;border-radius:8px}
+.addrow #alist{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(8,18,33,.2);max-height:300px;overflow:auto;z-index:1200;display:none}
+.addrow #alist .opt{padding:8px 13px;cursor:pointer;font-size:.9rem;display:flex;justify-content:space-between;gap:10px}
+.addrow #alist .opt:hover,.addrow #alist .opt.hi{background:#eef3f9}
+.addrow #alist .opt .rg{color:var(--mut);font-size:.76rem}
+.tablewrap{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:560px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+thead th{background:var(--navy);color:#fff;position:sticky;top:0;font-weight:600}
+thead th:first-child{background:var(--navy);z-index:2}
+tbody tr:hover td{background:#f3f7fb}
+tbody tr:hover td:first-child{background:#f3f7fb}
+td.best{color:var(--green);font-weight:700} td.worst{color:var(--red)}
+.kpisel{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:8px;background:#fff}
+footer{padding:30px 0;color:var(--mut);font-size:.85rem;text-align:center;border-top:1px solid var(--line);margin-top:20px}
+a{color:var(--navy)}
+.loading{padding:40px;text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Uso de Suelo y Población en Chile</h1>
+  <p>Plataforma comparada de las comunas y áreas metropolitanas del país: demografía y vivienda (Censo 2017/2024) cruzadas con el uso efectivo del suelo (Catastro SII).</p>
+  <span class="tag" id="htag">Cargando…</span>
+  <div class="selbar">
+    <div class="field">
+      <label>Comuna o área metropolitana</label>
+      <input id="cbox" type="text" autocomplete="off" placeholder="Buscar comuna o área…"/>
+      <div id="clist"></div>
+    </div>
+    <div class="ctxt" id="selctx"></div>
+  </div>
+</div></header>
+
+<div class="layout">
+<aside class="sidebar" id="regionnav">
+  <div class="sb-title">Explorar por región de Chile</div>
+  <div id="rn-list"></div>
+</aside>
+<div class="content">
+<button class="sb-toggle" id="sbToggle">☰ Explorar por región</button>
+<nav class="tabs">
+  <button data-tab="resumen" class="on">Resumen</button>
+  <button data-tab="oferta">Oferta de servicios por habitante</button>
+  <button data-tab="dinamica">Dinámica de crecimiento</button>
+  <button data-tab="comparar">Comparar ciudades</button>
+  <button data-tab="ranking">Ranking</button>
+  <button data-tab="tend-demo">Tendencias demográficas</button>
+  <button data-tab="tend-suelo">Tendencias de uso de suelo</button>
+</nav>
+
+<main class="wrap">
+
+  <!-- ============ RESUMEN ============ -->
+  <section class="panel on" id="p-resumen">
+    <h2 id="res-title">Resumen<span class="bar"></span></h2>
+    <p class="lead" id="res-lead"></p>
+    <div id="res-kpis"></div>
+  </section>
+
+  <!-- ============ OFERTA / ZONAL ============ -->
+  <section class="panel" id="p-oferta">
+    <h2>Oferta de servicios por habitante<span class="bar"></span></h2>
+    <p class="lead">Indicadores por <b>zona censal</b> (Censo 2024) cruzados con el uso efectivo del suelo (SII): disponibilidad de suelo y servicios por habitante, y demografía. El cruce SII↔Censo se hace por punto-en-polígono (centroide de manzana → zona censal).</p>
+    <div class="panelctrl">
+      <div><label>Indicador</label><select id="z-sel"></select></div>
+      <div class="desc" id="z-desc"></div>
+    </div>
+    <div id="z-map" class="map"></div>
+    <div class="note" id="z-omit" style="display:none"></div>
+    <div class="note" id="z-note"></div>
+    <div class="chartbox">
+      <h3 id="z-cct">Comparación por comuna</h3>
+      <p id="z-ccs">El mismo indicador, agregado a nivel de comuna del área, con referencia nacional.</p>
+      <div class="cwrap" style="height:430px"><canvas id="z-ccomp"></canvas></div>
+    </div>
+    <div id="z-empty" class="empty" style="display:none"></div>
+  </section>
+
+  <!-- ============ DINAMICA ============ -->
+  <section class="panel" id="p-dinamica">
+    <h2>Variación intercensal de población (2017→2024)<span class="bar"></span></h2>
+    <p class="lead" id="d-ilead">Cambio de población entre los Censos <b>2017 y 2024</b> (cifras oficiales INE). <b style="color:#1a9850">Verde</b> = gana población; <b style="color:#d73027">rojo</b> = pierde.</p>
+    <div class="ctrl" id="d-toggle">
+      <button id="d-bt-com" class="on">Por comuna (%)</button>
+      <button id="d-bt-zon">Por zona (consolidadas)</button>
+    </div>
+    <div id="d-imap" class="map"></div>
+    <div class="note" id="d-inote" style="display:none"></div>
+    <div class="chartbox">
+      <h3 id="d-cint-title">Variación intercensal de población por comuna</h3>
+      <p id="d-cint-sub">Variación porcentual sobre los totales censales oficiales.</p>
+      <div class="cwrap" style="height:430px"><canvas id="d-cint"></canvas></div>
+    </div>
+
+    <h2 style="margin-top:40px">Dinámicas de crecimiento, densificación o extensión<span class="bar"></span></h2>
+    <p class="lead">Reconstrucción de la construcción nueva por año desde el catastro SII (año de construcción del corte vigente). <b>Departamento</b> = predio habitacional de 3+ pisos; <b>casa</b> = 1–2 pisos.</p>
+    <div id="d-growth">
+      <div class="chartbox">
+        <h3>¿Crece más la población o la ciudad construida?</h3>
+        <p>Stock de m² construidos por año vs. población censal (índice base 2017 = 100).</p>
+        <div class="cwrap"><canvas id="d-c1"></canvas></div>
+      </div>
+      <div class="chartbox">
+        <h3>Casas vs. departamentos construidos por año</h3>
+        <p>Barras: unidades nuevas. Línea: cociente departamentos ÷ casas. <b>&gt;1,25</b> densificación · <b>&lt;0,75</b> extensión · <b>0,75–1,25</b> mixta.</p>
+        <div class="cwrap"><canvas id="d-c2"></canvas></div>
+      </div>
+      <div class="note" id="d-cdbox"></div>
+      <div class="two">
+        <div class="chartbox">
+          <h3>m² nuevos por año: densificación vs. expansión</h3>
+          <p>Barras apiladas: densificación (manzanas ya construidas en el año base) vs. expansión (manzanas antes vacías).</p>
+          <div class="cwrap"><canvas id="d-c3"></canvas></div>
+        </div>
+        <div class="chartbox">
+          <h3>Reparto total del período</h3>
+          <p>Porcentaje de m² nuevos por tipo.</p>
+          <div class="cwrap"><canvas id="d-c3b"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div id="d-growth-empty" class="empty" style="display:none"></div>
+  </section>
+
+  <!-- ============ COMPARAR ============ -->
+  <section class="panel" id="p-comparar">
+    <h2>Comparar ciudades<span class="bar"></span></h2>
+    <p class="lead">Selecciona varias comunas o áreas metropolitanas para contrastarlas: tabla de KPIs lado a lado, gráfico de dispersión y mapa coroplético nacional. El ranking nacional está en su propia pestaña.</p>
+    <div class="cmp-pick">
+      <b>Ciudades en comparación</b>
+      <div class="chips" id="cmp-chips"></div>
+      <div class="addrow">
+        <div class="field">
+          <input id="cmp-add" type="text" autocomplete="off" placeholder="Agregar comuna o área metropolitana…"/>
+          <div id="alist"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tablewrap" id="cmp-tablewrap"></div>
+
+    <div class="panelctrl" style="margin-top:24px">
+      <div><label>Eje X de la dispersión</label><select id="cmp-kx" class="kpisel"></select></div>
+      <div><label>Eje Y de la dispersión (define el color del mapa)</label><select id="cmp-ky" class="kpisel"></select></div>
+    </div>
+    <div class="chartbox">
+      <h3 id="cmp-sc-title">Dispersión</h3>
+      <p id="cmp-sc-sub"></p>
+      <div class="cwrap" style="height:560px"><canvas id="cmp-scatter"></canvas></div>
+    </div>
+    <div class="chartbox">
+      <h3 id="cmp-map-title">Mapa nacional por comuna</h3>
+      <p id="cmp-map-sub">Coroplético sobre las 345 comunas, coloreado por el indicador del <b>eje Y</b>. Las ciudades seleccionadas van resaltadas.</p>
+      <div id="cmp-map" class="map"></div>
+    </div>
+  </section>
+
+  <!-- ============ RANKING ============ -->
+  <section class="panel" id="p-ranking">
+    <h2>Ranking nacional<span class="bar"></span></h2>
+    <p class="lead">Ordena las ciudades del país por una dimensión. Filtra por región y por <b>tamaño mínimo de población</b> — esto evita distorsiones en los indicadores por habitante de comunas rurales muy chicas (su catastro cubre mucho suelo para poca gente). Haz clic en una barra para abrir esa ciudad.</p>
+    <div class="panelctrl">
+      <div><label>Dimensión</label><select id="rk-dim" class="kpisel"></select></div>
+      <div><label>Ámbito</label><select id="rk-scope" class="kpisel"><option value="comuna">Comunas</option><option value="area">Áreas metropolitanas</option></select></div>
+      <div><label>Región</label><select id="rk-region" class="kpisel"></select></div>
+      <div><label>Población mínima</label><select id="rk-minpob" class="kpisel">
+        <option value="0">Todas</option><option value="10000">≥ 10.000 hab</option>
+        <option value="20000" selected>≥ 20.000 hab</option><option value="50000">≥ 50.000 hab</option>
+        <option value="100000">≥ 100.000 hab</option></select></div>
+      <div><label>Mostrar</label><select id="rk-top" class="kpisel"><option value="25" selected>Top 25</option><option value="40">Top 40</option><option value="15">Top 15</option></select></div>
+    </div>
+    <div class="note" id="rk-desc" style="margin-top:14px"></div>
+    <div class="chartbox">
+      <h3 id="rk-title">Ranking</h3>
+      <p id="rk-sub"></p>
+      <div class="cwrap" id="rk-wrap" style="height:640px"><canvas id="rk-chart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ TENDENCIAS DEMOGRÁFICAS ============ -->
+  <section class="panel" id="p-tend-demo">
+    <h2>Tendencias demográficas · 2030 / 2035<span class="bar"></span></h2>
+    <p class="lead">Proyección de población, vivienda y <b>envejecimiento</b> por comuna y área metropolitana (índice 65+/&lt;15 por zona y peak poblacional). <b>Ejercicio estadístico provisional</b>: no incorpora los instrumentos de planificación territorial (planes reguladores).</p>
+    <iframe class="tendframe" id="if-demo" data-src="tendencias/index.html?embed=1" title="Tendencias demográficas" loading="lazy"></iframe>
+  </section>
+
+  <!-- ============ TENDENCIAS DE USO DE SUELO ============ -->
+  <section class="panel" id="p-tend-suelo">
+    <h2>Tendencias de uso de suelo · 2030 / 2035<span class="bar"></span></h2>
+    <p class="lead">Proyección de m² construidos por uso (Habitacional, Comercio, Educación, Salud, Oficina, Industria) a nivel de zona, con escenarios. <b>Ejercicio estadístico provisional</b>: no incorpora los instrumentos de planificación territorial (planes reguladores).</p>
+    <iframe class="tendframe" id="if-suelo" data-src="tendencias/usos.html?embed=1" title="Tendencias de uso de suelo" loading="lazy"></iframe>
+  </section>
+
+</main>
+
+<section class="wrap" style="padding:10px 20px 0">
+  <div class="note">
+    <b>Nota metodológica.</b> (1) Se reporta <b>uso efectivo (fiscal)</b> del suelo (Catastro SII), no la zonificación normativa. (2) El catastro usa el <b>código interno SII</b>, no INE; el cruce se resuelve por nombre de comuna y, para los mapas zonales, por geolocalización (centroide de manzana → zona censal). (3) De las 345 comunas, <b id="nt-sii">302</b> tienen catastro SII enriquecido; el resto muestra solo indicadores censales. (4) Casa vs. departamento se aproxima por <b>pisos</b> (≥3 = departamento). (5) Las series temporales se reconstruyen con el <b>año de construcción</b> del corte vigente (2025 parcial). (6) Las zonas censales son urbanas; el suelo rural queda fuera del mapa zonal. (7) Los KPIs de un área metropolitana agregan sus comunas (sumas para totales; promedios ponderados por población/viviendas/predios para tasas). (NSE) El <b>nivel socioeconómico</b> está <b>anclado al ingreso real de CASEN 2024</b>: se usa el ingreso del hogar per cápita mediano por comuna (CASEN, factor de expansión comunal `expc`, con ajuste por tamaño de muestra; imputado desde indicadores censales donde CASEN no alcanza). El <b>nivel</b> (Bajo→Alto) es el <b>quintil de ingreso nacional de CASEN</b> en que cae la comuna — por eso la mayoría de la población es <b>Medio</b> (~62%) y solo ~5% es <b>Alto</b> (reflejo real de la distribución de ingresos), corrigiendo el sesgo "todo alto" de un índice puramente relativo. El <b>score</b> (0–100) es el percentil del ingreso en la distribución nacional. El NSE por <b>zona</b> re-ancla cada comuna a su nivel CASEN preservando la segregación interna. (8) Se reportan <b>dos densidades</b>: la del <b>área comunal completa</b> (incluye cerros, paños vacíos y suelo rural, por lo que subestima la densidad real de muchas ciudades) y la del <b>sector consolidado</b> = población ÷ superficie de las zonas censales urbanas efectivamente construidas (más representativa; p. ej. Antofagasta pasa de 0,3 a 172 hab/ha, Valparaíso de 24 a 125). (9) Los <b>mapas por zona censal</b> (pestaña Oferta) y las <b>series de crecimiento</b> (pestaña Dinámica) están disponibles para la mayoría de las comunas con catastro; el resto de comunas muestra los indicadores a nivel comunal en Resumen y Comparar. Algunas comunas sin catastro enriquecido se omiten del mapa zonal (se indican sobre el mapa). El cruce zonal asigna 77–98% de los m² del área (el resto es rural o queda fuera del límite urbano).
+  </div>
+</section>
+</div><!-- /.content -->
+</div><!-- /.layout -->
+
+<footer><div class="wrap">
+  Fuente: Censo INE 2017/2024 + Catastro de bienes raíces SII · Elaboración propia · Rodrigo Medina González, Universidad de Concepción.
+</div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

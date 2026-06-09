@@ -1,0 +1,398 @@
+{
+ "Gran Concepción": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 4.7,
+    "flujo": 1.9,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 5.9,
+    "flujo": 1.4,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 6.5,
+    "flujo": 10.5,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 40.4,
+    "flujo": 51.5,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 1.5,
+    "flujo": 6.4,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 0.9,
+    "flujo": 9.5,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 6.3,
+    "flujo": 3.0,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 18.7,
+    "flujo": 11.3,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 35.4,
+    "flujo": 8.5,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 81.7,
+    "flujo": 16.7,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 21.0,
+    "flujo": 17.4,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 1.2,
+    "flujo": 4.5,
+    "n": 1
+   }
+  }
+ },
+ "Gran Santiago": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 3.1,
+    "flujo": 0.5,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 3.1,
+    "flujo": 8.8,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 3.6,
+    "flujo": 5.8,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 32.9,
+    "flujo": 1.6,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 13.7,
+    "flujo": 9.8,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 34.2,
+    "flujo": 13.9,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 1.9,
+    "flujo": 0.6,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 7.8,
+    "flujo": 11.4,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 10.9,
+    "flujo": 0.2,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 52.9,
+    "flujo": 18.3,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 20.7,
+    "flujo": 13.3,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 28.8,
+    "flujo": 7.1,
+    "n": 1
+   }
+  }
+ },
+ "Gran Valparaíso": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 1.1,
+    "flujo": 1.2,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 6.4,
+    "flujo": 9.8,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 18.0,
+    "flujo": 2.0,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 31.1,
+    "flujo": 37.7,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 3.1,
+    "flujo": 1.9,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 97.0,
+    "flujo": 39.6,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 3.3,
+    "flujo": 1.5,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 4.2,
+    "flujo": 7.4,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 17.8,
+    "flujo": 4.6,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 18.4,
+    "flujo": 24.4,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 6.2,
+    "flujo": 0.6,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 124.5,
+    "flujo": 6.1,
+    "n": 1
+   }
+  }
+ },
+ "Antofagasta": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 6.9,
+    "flujo": 3.2,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 9.9,
+    "flujo": 4.8,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 5.2,
+    "flujo": 11.0,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 55.1,
+    "flujo": 54.0,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 3.9,
+    "flujo": 11.0,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 22.9,
+    "flujo": 2.2,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 7.8,
+    "flujo": 4.1,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 0.4,
+    "flujo": 15.5,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 2.6,
+    "flujo": 6.5,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 46.4,
+    "flujo": 51.3,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 0.7,
+    "flujo": 1.2,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 5.3,
+    "flujo": 10.5,
+    "n": 1
+   }
+  }
+ },
+ "Temuco": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 4.9,
+    "flujo": 1.4,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 9.9,
+    "flujo": 4.7,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 45.1,
+    "flujo": 11.7,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 335.8,
+    "flujo": 34.3,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 18.8,
+    "flujo": 9.3,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 48.1,
+    "flujo": 18.2,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 9.0,
+    "flujo": 0.0,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 2.3,
+    "flujo": 3.2,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 31.2,
+    "flujo": 3.9,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 79.2,
+    "flujo": 45.7,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 12.0,
+    "flujo": 3.1,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 57.8,
+    "flujo": 16.8,
+    "n": 1
+   }
+  }
+ },
+ "La Serena-Coquimbo": {
+  "2014": {
+   "Habitacional": {
+    "cagr": 2.3,
+    "flujo": 4.3,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 18.3,
+    "flujo": 22.9,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 8.3,
+    "flujo": 0.4,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 54.7,
+    "flujo": 65.1,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 0.7,
+    "flujo": 1.1,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 16.3,
+    "flujo": 25.3,
+    "n": 1
+   }
+  },
+  "2016": {
+   "Habitacional": {
+    "cagr": 9.3,
+    "flujo": 2.3,
+    "n": 1
+   },
+   "Comercio": {
+    "cagr": 13.2,
+    "flujo": 18.0,
+    "n": 1
+   },
+   "Educacion": {
+    "cagr": 10.9,
+    "flujo": 3.0,
+    "n": 1
+   },
+   "Salud": {
+    "cagr": 60.6,
+    "flujo": 74.8,
+    "n": 1
+   },
+   "Oficina": {
+    "cagr": 3.2,
+    "flujo": 5.4,
+    "n": 1
+   },
+   "Industria": {
+    "cagr": 36.5,
+    "flujo": 36.1,
+    "n": 1
+   }
+  }
+ }
+}
