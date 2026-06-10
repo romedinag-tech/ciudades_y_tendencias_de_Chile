@@ -64,7 +64,7 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
   <div class="note" id="agenote"></div>
 
   <h2>Envejecimiento por zona<span></span></h2>
-  <p class="lead">Índice de envejecimiento de cada zona censal (adultos 60+ por cada 100 menores de 14, según tramos del Censo 2024). La proyección 2030/2035 escala cada zona por la trayectoria de su comuna (INE). Provisional.</p>
+  <p class="lead">Índice de envejecimiento de cada zona censal (personas 65+ por cada 100 menores de 15, igual que el indicador de ciudad). Se estima desde los tramos de edad del Censo 2024 y se calibra a 65+/&lt;15 con la estructura de edad de la comuna (INE). La proyección 2030/2035 escala cada zona por la trayectoria de su comuna. Provisional.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:8px 0" id="zctrls">
     <div><label>Año</label><span class="seg" id="zyear"><button data-y="2024" class="on">2024 (obs.)</button><button data-y="2030">2030</button><button data-y="2035">2035</button></span></div>
   </div>
@@ -174,7 +174,7 @@ function recolorZ(fit){if(!ZG||!zmap)return;const fld=zfield();
  if(zlayer)zmap.removeLayer(zlayer);
  zlayer=L.geoJSON(ZG,{style:f=>{const v=f.properties[fld];return {weight:.4,color:"#888",fillOpacity:.82,fillColor:zcolor(v,brk)};},
    onEachFeature:(f,l)=>{const p=f.properties;
-     l.bindPopup("<b>Zona "+p.zona+"</b> · "+(p.comuna||"")+"<br>Índice de envejecimiento (60+/<14):<br>2024: <b>"+(p.idx2024==null?"s/d":p.idx2024)+"</b><br>2030: "+(p.idx2030==null?"s/d":p.idx2030)+"<br>2035: "+(p.idx2035==null?"s/d":p.idx2035)+(p.pob!=null?"<br>Población: "+fmt(p.pob):""));}}).addTo(zmap);
+     l.bindPopup("<b>Zona "+p.zona+"</b> · "+(p.comuna||"")+"<br>Índice de envejecimiento (65+/<15):<br>2024: <b>"+(p.idx2024==null?"s/d":p.idx2024)+"</b><br>2030: "+(p.idx2030==null?"s/d":p.idx2030)+"<br>2035: "+(p.idx2035==null?"s/d":p.idx2035)+(p.pob!=null?"<br>Población: "+fmt(p.pob):""));}}).addTo(zmap);
  if(zlegend)zmap.removeControl(zlegend);zlegend=L.control({position:"bottomright"});
  zlegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");
    d.innerHTML="<b>Índice de envejecimiento</b><br><span style='color:#5b6b7b;font-size:.72rem'>escala fija (compara años)</span><br>"+(brk?("<i style='background:"+AGERAMP[0]+"'></i>≤ "+Math.round(brk[0])+"<br>"+[1,2,3].map(i=>"<i style='background:"+AGERAMP[i]+"'></i>"+Math.round(brk[i-1])+"–"+Math.round(brk[i])).join("<br>")+"<br><i style='background:"+AGERAMP[4]+"'></i>> "+Math.round(brk[3])):"sin datos")+"<br><i style='background:#d8dde3'></i>s/d";return d;};
