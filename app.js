@@ -317,12 +317,28 @@ function renderResumen(){const s=S.sel;
    ================================================================= */
 // marca de autor en los mapas (visible y viaja en capturas)
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
+// capas base (Mapa claro / Satélite) + pantalla completa + marca de autor
+function mapChrome(map){
+ const claro=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19});
+ const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
+ claro.addTo(map);
+ L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
+ const fc=L.control({position:"topleft"});
+ fc.onAdd=function(){const d=L.DomUtil.create("div","leaflet-bar fs-ctrl");const a=L.DomUtil.create("a","",d);a.href="#";a.title="Pantalla completa";a.setAttribute("role","button");a.setAttribute("aria-label","Pantalla completa");
+   a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>';
+   L.DomEvent.on(a,"click",function(e){L.DomEvent.stop(e);const el=map.getContainer();
+     if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);}
+     else{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);}
+     setTimeout(function(){map.invalidateSize();},250);});
+   return d;};
+ fc.addTo(map);
+ authorWM(map);
+ return {claro,sat};
+}
 let zMap=null,zLayer=null,zLegend=null,zInfo=null,zCur="dens_hab_ha",zFeats=[],zComp=null;
 function ensureZMap(){if(zMap)return;
  zMap=L.map("z-map",{preferCanvas:false}).setView([-36.86,-73.03],11);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(zMap);
- authorWM(zMap);
+ mapChrome(zMap);
  zInfo=L.control({position:"topright"});
  zInfo.onAdd=function(){this._d=L.DomUtil.create("div","info");this.update();return this._d;};
  zInfo.update=function(p,m){if(!p){this._d.innerHTML="<b>Pasa el cursor</b><br>sobre una zona";return;}
@@ -422,9 +438,7 @@ function colC(v){if(v==null)return "#d8dde3";
  if(v<10)return "#a6d96a"; if(v<15)return "#66bd63"; return "#1a9850";}
 function ensureIMap(){if(iMap)return;
  iMap=L.map("d-imap",{preferCanvas:false}).setView([-36.86,-73.03],11);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(iMap);
- authorWM(iMap);
+ mapChrome(iMap);
  document.getElementById("d-bt-com").onclick=()=>setIMode("com");
  document.getElementById("d-bt-zon").onclick=()=>setIMode("zon");
 }
@@ -662,9 +676,7 @@ function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
 }
 function ensureCmpMap(){if(CMP.map)return;
  CMP.map=L.map("cmp-map",{preferCanvas:true}).setView([-38,-72],5);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(CMP.map);
- authorWM(CMP.map);
+ mapChrome(CMP.map);
 }
 function cmpMapDraw(){ensureCmpMap();const k=CMP.ky,m=KPI[k],cols=R[m.ramp];
  const isNse=!!m.nse;  // NSE: colorear por nivel (5 clases fijas)
@@ -807,7 +819,7 @@ function drawRanking(){
    TABS
    ================================================================= */
 function activateTab(t){
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x.dataset.tab===t));
+ document.querySelectorAll(".tabs button").forEach(x=>{const on=x.dataset.tab===t;x.classList.toggle("on",on);x.setAttribute("aria-selected",on?"true":"false");});
  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t));
  // refrescar mapas al hacerse visibles
  if(t==="oferta"&&zMap)setTimeout(()=>{zMap.invalidateSize();if(zLayer)zMap.fitBounds(zLayer.getBounds(),{padding:[10,10]});},60);
@@ -819,6 +831,13 @@ function activateTab(t){
  writeURL();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>activateTab(b.dataset.tab));
+// accesibilidad de las pestañas: roles ARIA + navegación con flechas
+(function(){const nav=document.querySelector(".tabs");if(!nav)return;const btns=[...nav.querySelectorAll("button")];
+ nav.setAttribute("role","tablist");nav.setAttribute("aria-label","Secciones");
+ btns.forEach(b=>{b.setAttribute("role","tab");b.setAttribute("aria-controls","p-"+b.dataset.tab);b.setAttribute("aria-selected",b.classList.contains("on")?"true":"false");});
+ document.querySelectorAll(".panel").forEach(p=>{p.setAttribute("role","tabpanel");p.setAttribute("tabindex","0");});
+ nav.addEventListener("keydown",e=>{if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;const i=btns.indexOf(document.activeElement);if(i<0)return;e.preventDefault();const n=(i+(e.key==="ArrowRight"?1:btns.length-1)+btns.length)%btns.length;btns[n].focus();activateTab(btns[n].dataset.tab);});
+})();
 // ---- enlaces profundos: estado (ciudad + pestaña) en la URL, compartible ----
 function cityParam(){const s=S.sel;if(!s)return null;return s.type==="metro"?slugify(s.key):String(s.key);}
 function currentTab(){const b=document.querySelector(".tabs button.on");return b?b.dataset.tab:"resumen";}

@@ -11,6 +11,9 @@
 *{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;-webkit-font-smoothing:antialiased}
 .kpi .v,table,th,td{font-variant-numeric:tabular-nums}
 .author-wm{font:600 11px/1 var(--sans);color:rgba(40,55,75,.7);background:rgba(255,255,255,.8);padding:3px 7px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.fs-ctrl a{display:flex!important;align-items:center;justify-content:center;width:30px;height:30px;color:#2b3a4a}.fs-ctrl svg{width:16px;height:16px}
+.leaflet-control-layers,.leaflet-control-layers-toggle{border-radius:9px!important}
+.leaflet-container:fullscreen{height:100%!important;width:100%!important}
 .warn{background:#c55a11;color:#fff;padding:8px 18px;font-weight:600;font-size:.86rem;text-align:center}
 .warn a{color:#fff;text-decoration:underline}
 .nav{background:#173a5a;display:flex;gap:0;flex-wrap:wrap}
@@ -95,6 +98,14 @@ const NAVY="#1f4e79",OR="#c55a11",USOS=["Habitacional","Comercio","Educacion","S
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
 // marca de autor en mapas y gráficos (viaja en capturas)
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
+function mapChrome(map){
+ const claro=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19});
+ const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar',maxZoom:19});
+ claro.addTo(map);L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
+ const fc=L.control({position:"topleft"});fc.onAdd=function(){const d=L.DomUtil.create("div","leaflet-bar fs-ctrl");const a=L.DomUtil.create("a","",d);a.href="#";a.title="Pantalla completa";a.setAttribute("aria-label","Pantalla completa");a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>';
+   L.DomEvent.on(a,"click",function(e){L.DomEvent.stop(e);const el=map.getContainer();if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);}else{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);}setTimeout(function(){map.invalidateSize();},250);});return d;};fc.addTo(map);
+ authorWM(map);return {claro,sat};
+}
 if(window.Chart)try{Chart.register({id:"authorWM",afterDraw(c){const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px Inter,Segoe UI,sans-serif";x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});}catch(e){}
 const AGERAMP=["#2c7bb6","#abd9e9","#ffffbf","#fdae61","#d7191c"];   // joven -> envejecido
 let SUM,GEO,EIDX,byCut={},envByCut={},cPob,cEnv,map,layer,legend,zmap,zlayer,zlegend,ZG,ZBRK=null,zYear="2024";
@@ -181,7 +192,7 @@ function refreshKpis(){const dem=CURDEM,env=CURENV;if(!dem)return;const d=dem.de
 }
 // ---- mapa zonal de envejecimiento ----
 function ensureZMap(){if(zmap)return;zmap=L.map("zmap",{preferCanvas:true}).setView([-36.8,-73.05],11);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(zmap);authorWM(zmap);}
+ mapChrome(zmap);}
 function zbreaks(vals){const v=vals.filter(x=>x!=null).sort((a,b)=>a-b);if(!v.length)return null;
  const q=p=>v[Math.min(v.length-1,Math.floor(p*(v.length-1)))];return [q(.2),q(.4),q(.6),q(.8)];}
 function zcolor(x,brk){if(x==null)return "#d8dde3";if(!brk)return AGERAMP[2];for(let i=0;i<4;i++)if(x<=brk[i])return AGERAMP[i];return AGERAMP[4];}
@@ -202,7 +213,7 @@ function recolorZ(fit){if(!ZG||!zmap)return;const fld=zfield();
 }
 // ---- mapa nacional ----
 function initMap(){map=L.map("map",{preferCanvas:true}).setView([-38,-72],5);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(map);authorWM(map);}
+ mapChrome(map);}
 function valFor(c,mode){if(!c)return null;
  if(mode==="pobpct")return c.pob_2024?100*(c.pob_2035/c.pob_2024-1):null;
  const e=envByCut[c.cut];if(!e)return null;
