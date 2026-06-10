@@ -64,7 +64,7 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
   <div class="note" id="agenote"></div>
 
   <h2>Envejecimiento por zona<span></span></h2>
-  <p class="lead">Índice de envejecimiento de cada zona censal (personas 65+ por cada 100 menores de 15, igual que el indicador de ciudad). Se estima desde los tramos de edad del Censo 2024 y se calibra a 65+/&lt;15 con la estructura de edad de la comuna (INE). La proyección 2030/2035 escala cada zona por la trayectoria de su comuna. Provisional.</p>
+  <p class="lead">Índice de envejecimiento de cada zona censal (personas 65+ por cada 100 menores de 15, igual que el indicador de ciudad). Se estima desde los tramos de edad del Censo 2024 y se <b>re-centra para que el promedio ponderado por población de las zonas coincida con el índice de la ciudad</b>, preservando la variación entre zonas. La proyección 2030/2035 sigue la trayectoria del índice comunal (INE). Provisional.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:8px 0" id="zctrls">
     <div><label>Año</label><span class="seg" id="zyear"><button data-y="2024" class="on">2024 (obs.)</button><button data-y="2030">2030</button><button data-y="2035">2035</button></span></div>
   </div>
