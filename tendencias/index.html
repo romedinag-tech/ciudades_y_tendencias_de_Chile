@@ -4,10 +4,13 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tendencias demográficas · 2030 / 2035 (Chile)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-:root{--navy:#1f4e79;--or:#c55a11;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;}
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55}
+:root{--navy:#1f4e79;--or:#c55a11;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;--sans:'Inter',-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+*{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;-webkit-font-smoothing:antialiased}
+.kpi .v,table,th,td{font-variant-numeric:tabular-nums}
+.author-wm{font:600 11px/1 var(--sans);color:rgba(40,55,75,.7);background:rgba(255,255,255,.8);padding:3px 7px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 .warn{background:#c55a11;color:#fff;padding:8px 18px;font-weight:600;font-size:.86rem;text-align:center}
 .warn a{color:#fff;text-decoration:underline}
 .nav{background:#173a5a;display:flex;gap:0;flex-wrap:wrap}
@@ -90,6 +93,9 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
 <script>
 const NAVY="#1f4e79",OR="#c55a11",USOS=["Habitacional","Comercio","Educacion","Salud","Oficina","Industria"];
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
+// marca de autor en mapas y gráficos (viaja en capturas)
+function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
+if(window.Chart)try{Chart.register({id:"authorWM",afterDraw(c){const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px Inter,Segoe UI,sans-serif";x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});}catch(e){}
 const AGERAMP=["#2c7bb6","#abd9e9","#ffffbf","#fdae61","#d7191c"];   // joven -> envejecido
 let SUM,GEO,EIDX,byCut={},envByCut={},cPob,cEnv,map,layer,legend,zmap,zlayer,zlegend,ZG,ZBRK=null,zYear="2024";
 Promise.all([
@@ -175,7 +181,7 @@ function refreshKpis(){const dem=CURDEM,env=CURENV;if(!dem)return;const d=dem.de
 }
 // ---- mapa zonal de envejecimiento ----
 function ensureZMap(){if(zmap)return;zmap=L.map("zmap",{preferCanvas:true}).setView([-36.8,-73.05],11);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(zmap);}
+ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(zmap);authorWM(zmap);}
 function zbreaks(vals){const v=vals.filter(x=>x!=null).sort((a,b)=>a-b);if(!v.length)return null;
  const q=p=>v[Math.min(v.length-1,Math.floor(p*(v.length-1)))];return [q(.2),q(.4),q(.6),q(.8)];}
 function zcolor(x,brk){if(x==null)return "#d8dde3";if(!brk)return AGERAMP[2];for(let i=0;i<4;i++)if(x<=brk[i])return AGERAMP[i];return AGERAMP[4];}
@@ -196,7 +202,7 @@ function recolorZ(fit){if(!ZG||!zmap)return;const fld=zfield();
 }
 // ---- mapa nacional ----
 function initMap(){map=L.map("map",{preferCanvas:true}).setView([-38,-72],5);
- L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(map);}
+ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19}).addTo(map);authorWM(map);}
 function valFor(c,mode){if(!c)return null;
  if(mode==="pobpct")return c.pob_2024?100*(c.pob_2035/c.pob_2024-1):null;
  const e=envByCut[c.cut];if(!e)return null;

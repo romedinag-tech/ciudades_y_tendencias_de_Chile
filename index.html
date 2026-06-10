@@ -3,13 +3,39 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Uso de Suelo y Población · Chile · Comunas y Áreas Metropolitanas</title>
+<title>Ciudades y tendencias de Chile · uso de suelo y población — By Rodrigo Medina G.</title>
+<meta name="description" content="Plataforma de análisis de uso de suelo y población de las comunas y áreas metropolitanas de Chile, con proyecciones de tendencias demográficas y de suelo 2030/2035. Por Rodrigo Medina González, U. de Concepción."/>
+<meta name="author" content="Rodrigo Medina González"/>
+<meta name="theme-color" content="#16365a"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Ciudades y tendencias de Chile"/>
+<meta property="og:title" content="Ciudades y tendencias de Chile — By Rodrigo Medina G."/>
+<meta property="og:description" content="Uso de suelo, población y envejecimiento por comuna y área metropolitana, con proyecciones 2030/2035. Análisis y desarrollo: Rodrigo Medina González."/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Ciudades y tendencias de Chile — By Rodrigo Medina G."/>
+<meta name="twitter:description" content="Uso de suelo, población y envejecimiento por comuna y área metropolitana, con proyecciones 2030/2035. By Rodrigo Medina G."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-:root{--navy:#1f4e79;--navy2:#2e5e8c;--or:#c55a11;--teal:#21918c;--green:#1a9850;--red:#d73027;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;}
+:root{
+  --navy:#1f4e79;--navy2:#2e5e8c;--navy-d:#143150;--or:#d96a1f;
+  --teal:#1f8a86;--green:#1a9850;--red:#d6453a;--amber:#e0a92b;
+  --bg:#f4f7fb;--surface:#ffffff;--surface-2:#eef3f9;--ink:#172430;--mut:#5e6e80;--mut-2:#8696a7;
+  --line:#e4eaf2;--line-2:#d3dde9;
+  --grad:linear-gradient(135deg,#143150 0%,#1f4e79 60%,#2e5e8c 100%);
+  --r:14px;--r-sm:10px;--r-lg:18px;
+  --sh-sm:0 1px 2px rgba(20,40,70,.05),0 1px 3px rgba(20,40,70,.05);
+  --sh:0 2px 10px rgba(20,40,70,.05),0 10px 28px rgba(20,40,70,.05);
+  --sh-lg:0 16px 44px rgba(20,40,70,.13);
+  --sans:'Inter',-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
-header{background:linear-gradient(135deg,#1f4e79,#2e5e8c);color:#fff;padding:34px 22px 26px}
+body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.kpi .v,table,.tag,th,td,#cbox,.rn-comunas button .pob{font-variant-numeric:tabular-nums}
+header{background:var(--grad);color:#fff;padding:30px 22px 24px;position:relative;overflow:hidden}
+header:before{content:"";position:absolute;inset:0;background:radial-gradient(900px 280px at 80% -40%,rgba(120,180,255,.18),transparent 70%);pointer-events:none}
+header>.wrap{position:relative}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
 header h1{margin:0 0 6px;font-size:1.75rem;font-weight:800;letter-spacing:-.5px}
 header p{margin:3px 0;opacity:.92;font-size:.95rem}
@@ -32,8 +58,9 @@ header p{margin:3px 0;opacity:.92;font-size:.95rem}
 .tabs button{border:none;background:none;padding:15px 18px;cursor:pointer;font-size:.95rem;font-weight:700;color:var(--mut);border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs button.on{color:var(--navy);border-bottom-color:var(--or)}
 .tabs button:hover{color:var(--navy)}
-.tabs button .ti{margin-right:6px;font-size:1.05em;line-height:1}
-.tabs button.on .ti{filter:none}
+.tabs button .ti{display:inline-flex;align-items:center;margin-right:7px;vertical-align:-3px;color:var(--mut-2)}
+.tabs button .ti svg{width:16px;height:16px}
+.tabs button.on .ti,.tabs button:hover .ti{color:var(--or)}
 /* ---- layout con menú lateral de regiones ---- */
 .layout{display:flex;max-width:1340px;margin:0 auto;align-items:flex-start}
 .sidebar{width:256px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:14px 8px 30px}
@@ -128,9 +155,36 @@ tbody tr:hover td{background:#f3f7fb}
 tbody tr:hover td:first-child{background:#f3f7fb}
 td.best{color:var(--green);font-weight:700} td.worst{color:var(--red)}
 .kpisel{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:8px;background:#fff}
-footer{padding:30px 0;color:var(--mut);font-size:.85rem;text-align:center;border-top:1px solid var(--line);margin-top:20px}
+footer{padding:26px 0;color:var(--mut);font-size:.85rem;text-align:center;border-top:1px solid var(--line);margin-top:20px}
+.foot-credit{color:var(--ink);font-size:.92rem}.foot-credit b{color:var(--navy)}
+.foot-src{margin-top:5px;font-size:.8rem;color:var(--mut-2)}
 a{color:var(--navy)}
 .loading{padding:40px;text-align:center;color:var(--mut)}
+/* ---- marca + autoría ---- */
+.brandrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:.9rem;letter-spacing:.2px;color:#eaf2fb}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.16);display:inline-flex;align-items:center;justify-content:center}
+.brand .mark svg{width:17px;height:17px;color:#fff}
+.byline{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#fff;font-size:.78rem;font-weight:600;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap;transition:background .15s}
+.byline b{font-weight:800}.byline:hover{background:rgba(255,255,255,.22)}
+.byline svg{width:13px;height:13px;opacity:.9}
+.sharebtn{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);color:#fff;font:600 .82rem var(--sans);padding:9px 14px;border-radius:10px;cursor:pointer;transition:background .15s;white-space:nowrap;align-self:flex-end}
+.sharebtn:hover{background:rgba(255,255,255,.24)}.sharebtn svg{width:15px;height:15px}
+/* ---- refinamiento de tarjetas + micro-interacción ---- */
+.kpi,.chartbox{box-shadow:var(--sh);border-color:var(--line)}
+.kpi{transition:transform .16s ease,box-shadow .16s ease;border-radius:var(--r)}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
+.tabs button{transition:color .15s,border-color .15s}
+:where(button,a,select,input):focus-visible{outline:2px solid var(--or);outline-offset:2px;border-radius:6px}
+/* ---- watermark de autor (viaja en capturas) ---- */
+.author-wm{font:600 11px/1 var(--sans);color:rgba(23,36,48,.62);background:rgba(255,255,255,.72);padding:3px 7px;border-radius:6px}
+.leaflet-control.author-wm{box-shadow:0 1px 4px rgba(0,0,0,.18)}
+/* ---- skeleton de carga ---- */
+.skel{position:relative;overflow:hidden;background:var(--surface-2);border-radius:var(--r-sm)}
+.skel:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.kpis.loading-skel{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:15px;margin-top:22px}
+.kpis.loading-skel .skel{height:92px}
 /* ---- móvil (no afecta el escritorio) ---- */
 @media(max-width:640px){
   header{padding:22px 16px 18px}
@@ -145,7 +199,7 @@ a{color:var(--navy)}
   .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;padding:0 8px;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
   .tabs button{padding:12px 12px;font-size:.85rem;white-space:nowrap;flex:0 0 auto}
-  .tabs button .ti{font-size:1.1em;margin-right:5px}
+  .tabs button .ti{margin-right:6px}.tabs button .ti svg{width:17px;height:17px}
   .panel{padding:22px 0}
   h2{font-size:1.22rem}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px}
@@ -163,13 +217,17 @@ a{color:var(--navy)}
 /* pantallas muy angostas: sólo iconos en las pestañas (el título de cada sección guía) */
 @media(max-width:430px){
   .tabs button .tl{display:none}
-  .tabs button{padding:13px 14px;font-size:1.15rem}
-  .tabs button .ti{margin-right:0}
+  .tabs button{padding:13px 15px}
+  .tabs button .ti{margin-right:0}.tabs button .ti svg{width:21px;height:21px}
 }
 </style>
 </head>
 <body>
 <header><div class="wrap">
+  <div class="brandrow">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6-4 6 4 6-3v14"/><path d="M9 21V12"/><path d="M15 21V13"/></svg></span> Ciudades y tendencias de Chile</div>
+    <a class="byline" href="https://github.com/romedinag-tech" target="_blank" rel="noopener" title="Análisis y desarrollo">By <b>Rodrigo Medina G.</b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+  </div>
   <h1>Uso de Suelo y Población en Chile</h1>
   <p>Plataforma comparada de las comunas y áreas metropolitanas del país: demografía y vivienda (Censo 2017/2024) cruzadas con el uso efectivo del suelo (Catastro SII).</p>
   <span class="tag" id="htag">Cargando…</span>
@@ -180,6 +238,7 @@ a{color:var(--navy)}
       <div id="clist"></div>
     </div>
     <div class="ctxt" id="selctx"></div>
+    <button id="shareBtn" class="sharebtn" type="button" title="Copiar el enlace de esta vista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Compartir vista</button>
   </div>
 </div></header>
 
@@ -191,13 +250,13 @@ a{color:var(--navy)}
 <div class="content">
 <button class="sb-toggle" id="sbToggle">☰ Explorar por región</button>
 <nav class="tabs">
-  <button data-tab="resumen" class="on"><span class="ti">📋</span><span class="tl">Resumen</span></button>
-  <button data-tab="oferta"><span class="ti">🏥</span><span class="tl">Oferta de servicios por habitante</span></button>
-  <button data-tab="dinamica"><span class="ti">📈</span><span class="tl">Dinámica de crecimiento</span></button>
-  <button data-tab="comparar"><span class="ti">⚖️</span><span class="tl">Comparar ciudades</span></button>
-  <button data-tab="ranking"><span class="ti">🏆</span><span class="tl">Ranking</span></button>
-  <button data-tab="tend-demo"><span class="ti">👥</span><span class="tl">Tendencias demográficas</span></button>
-  <button data-tab="tend-suelo"><span class="ti">🏗️</span><span class="tl">Tendencias de uso de suelo</span></button>
+  <button data-tab="resumen" class="on" aria-label="Resumen"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><span class="tl">Resumen</span></button>
+  <button data-tab="oferta" aria-label="Oferta de servicios por habitante"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M9 6h.01M15 6h.01M9 10h.01M15 10h.01M9 14h.01M15 14h.01"/></svg></span><span class="tl">Oferta de servicios por habitante</span></button>
+  <button data-tab="dinamica" aria-label="Dinámica de crecimiento"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span><span class="tl">Dinámica de crecimiento</span></button>
+  <button data-tab="comparar" aria-label="Comparar ciudades"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg></span><span class="tl">Comparar ciudades</span></button>
+  <button data-tab="ranking" aria-label="Ranking"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22m7-7.34V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M6 2h12v7a6 6 0 0 1-12 0Z"/></svg></span><span class="tl">Ranking</span></button>
+  <button data-tab="tend-demo" aria-label="Tendencias demográficas"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="tl">Tendencias demográficas</span></button>
+  <button data-tab="tend-suelo" aria-label="Tendencias de uso de suelo"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><span class="tl">Tendencias de uso de suelo</span></button>
 </nav>
 
 <main class="wrap">
@@ -353,12 +412,24 @@ a{color:var(--navy)}
 </div><!-- /.layout -->
 
 <footer><div class="wrap">
-  Fuente: Censo INE 2017/2024 + Catastro de bienes raíces SII · Elaboración propia · Rodrigo Medina González, Universidad de Concepción.
+  <div class="foot-credit">Análisis, modelo y desarrollo · <b>By Rodrigo Medina González</b> · Universidad de Concepción</div>
+  <div class="foot-src">Fuentes: Censo INE 2017/2024 · Catastro de bienes raíces (SII) · CASEN 2024 · Estimaciones y Proyecciones de Población INE 2002–2035. Elaboración propia.</div>
 </div></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+if(window.Chart){
+  const F="Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+  Chart.defaults.font.family=F; Chart.defaults.font.size=12; Chart.defaults.color="#5e6e80";
+  Chart.defaults.borderColor="rgba(20,40,70,.07)";
+  Chart.defaults.plugins.legend.labels.usePointStyle=true; Chart.defaults.plugins.legend.labels.boxWidth=8; Chart.defaults.plugins.legend.labels.padding=14;
+  Chart.defaults.plugins.tooltip.backgroundColor="rgba(23,36,48,.95)"; Chart.defaults.plugins.tooltip.padding=10; Chart.defaults.plugins.tooltip.cornerRadius=8; Chart.defaults.plugins.tooltip.titleFont={family:F,weight:"700"}; Chart.defaults.plugins.tooltip.bodyFont={family:F};
+  // watermark de autor en cada gráfico (viaja en capturas) — excluye los que llevan datalabels por uso
+  Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
+}
+</script>
 <script src="app.js"></script>
 </body>
 </html>

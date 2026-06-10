@@ -4,8 +4,8 @@
    Mapas zonales / dinámica por comuna: lazy-load data/zonas|intercensal|crecimiento/<slug>.(geo)json
    =================================================================== */
 const NAVY="#1f4e79",NAVY2="#2e5e8c",OR="#c55a11",TEAL="#21918c",GREEN="#1a9850",RED="#d73027",GREY="#9aa7b4";
-Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
-Chart.defaults.color="#5b6b7b";
+Chart.defaults.font.family="Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+Chart.defaults.color="#5e6e80";
 if(window.ChartDataLabels){Chart.register(ChartDataLabels);Chart.defaults.plugins.datalabels.display=false;}
 
 const R={
@@ -157,8 +157,8 @@ Promise.all([
  buildSelector(); buildComparador(); buildRegionNav(); buildRanking();
  // cobertura zonal (no bloquea; sólo para la nota de comunas omitidas)
  getJSON("data/zonas_cobertura.json").then(c=>{ZCOV=c;}).catch(()=>{});
- // selección inicial: Gran Concepción
- selectMetro("Gran Concepción");
+ // selección inicial desde la URL (enlace compartido) o Gran Concepción por defecto
+ applyURL();
 }).catch(e=>{document.body.insertAdjacentHTML("afterbegin",
  '<div class="loading">No se pudieron cargar los datos: '+e+'</div>');});
 
@@ -264,6 +264,7 @@ function finishSelect(){
  renderResumen(); renderOferta(); renderDinamica(); updateRegionNavActive();
  if(document.getElementById("p-ranking").classList.contains("on"))drawRanking();
  syncTendCity();   // tendencias embebidas siguen la ciudad seleccionada
+ if(typeof writeURL==="function")writeURL();   // refleja la ciudad en la URL (compartible)
 }
 
 /* =================================================================
@@ -314,11 +315,14 @@ function renderResumen(){const s=S.sel;
 /* =================================================================
    TAB 2 · OFERTA DE SERVICIOS POR HABITANTE (mapa zonal)
    ================================================================= */
+// marca de autor en los mapas (visible y viaja en capturas)
+function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
 let zMap=null,zLayer=null,zLegend=null,zInfo=null,zCur="dens_hab_ha",zFeats=[],zComp=null;
 function ensureZMap(){if(zMap)return;
  zMap=L.map("z-map",{preferCanvas:false}).setView([-36.86,-73.03],11);
  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
   {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(zMap);
+ authorWM(zMap);
  zInfo=L.control({position:"topright"});
  zInfo.onAdd=function(){this._d=L.DomUtil.create("div","info");this.update();return this._d;};
  zInfo.update=function(p,m){if(!p){this._d.innerHTML="<b>Pasa el cursor</b><br>sobre una zona";return;}
@@ -420,6 +424,7 @@ function ensureIMap(){if(iMap)return;
  iMap=L.map("d-imap",{preferCanvas:false}).setView([-36.86,-73.03],11);
  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
   {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(iMap);
+ authorWM(iMap);
  document.getElementById("d-bt-com").onclick=()=>setIMode("com");
  document.getElementById("d-bt-zon").onclick=()=>setIMode("zon");
 }
@@ -659,6 +664,7 @@ function ensureCmpMap(){if(CMP.map)return;
  CMP.map=L.map("cmp-map",{preferCanvas:true}).setView([-38,-72],5);
  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
   {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(CMP.map);
+ authorWM(CMP.map);
 }
 function cmpMapDraw(){ensureCmpMap();const k=CMP.ky,m=KPI[k],cols=R[m.ramp];
  const isNse=!!m.nse;  // NSE: colorear por nivel (5 clases fijas)
@@ -800,9 +806,8 @@ function drawRanking(){
 /* =================================================================
    TABS
    ================================================================= */
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
- const t=b.dataset.tab;
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+function activateTab(t){
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x.dataset.tab===t));
  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t));
  // refrescar mapas al hacerse visibles
  if(t==="oferta"&&zMap)setTimeout(()=>{zMap.invalidateSize();if(zLayer)zMap.fitBounds(zLayer.getBounds(),{padding:[10,10]});},60);
@@ -811,7 +816,21 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  if(t==="ranking")drawRanking();
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
-});
+ writeURL();
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>activateTab(b.dataset.tab));
+// ---- enlaces profundos: estado (ciudad + pestaña) en la URL, compartible ----
+function cityParam(){const s=S.sel;if(!s)return null;return s.type==="metro"?slugify(s.key):String(s.key);}
+function currentTab(){const b=document.querySelector(".tabs button.on");return b?b.dataset.tab:"resumen";}
+function writeURL(){try{const c=cityParam(),t=currentTab();const q=new URLSearchParams();
+ if(c)q.set("c",c); if(t&&t!=="resumen")q.set("t",t);
+ history.replaceState(null,"",location.pathname+(q.toString()?"?"+q.toString():""));}catch(e){}}
+function applyURL(){const q=new URLSearchParams(location.search);const c=q.get("c"),t=q.get("t");let ok=false;
+ if(c){ if(S.byCut[c]){selectComuna(c);ok=true;}
+   else {const mn=Object.keys(S.metros).find(n=>slugify(n)===c); if(mn){selectMetro(mn);ok=true;}} }
+ if(!ok)selectMetro("Gran Concepción");
+ if(t&&document.getElementById("p-"+t))activateTab(t);
+}
 // ---- pestañas de tendencias embebidas: ancladas al menú de ciudades ----
 function lazyFrame(id){const f=document.getElementById(id);if(!f)return;
  if(!f.src&&f.dataset.src){f.addEventListener("load",()=>postToFrame(id));f.src=f.dataset.src;}
@@ -826,3 +845,9 @@ function syncTendCity(){postToFrame("if-demo");postToFrame("if-suelo");}
 window.addEventListener("message",e=>{const d=e.data;if(!d||!d.__tendH)return;
  ["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);
    if(f&&f.contentWindow===e.source)f.style.height=Math.max(620,d.h)+"px";});});
+// botón "Compartir vista": copia el enlace de la vista actual (ciudad + pestaña)
+(function(){const b=document.getElementById("shareBtn");if(!b)return;
+ b.onclick=async()=>{const u=location.href,old=b.innerHTML;
+   try{await navigator.clipboard.writeText(u);}catch(e){try{const t=document.createElement("textarea");t.value=u;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();}catch(_){prompt("Copia el enlace:",u);return;}}
+   b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Enlace copiado';
+   setTimeout(()=>b.innerHTML=old,1700);};})();
