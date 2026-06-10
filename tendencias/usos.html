@@ -133,8 +133,10 @@ fetch("data/proyecciones_uso_index.json").then(r=>r.text()).then(t=>{IDX=JSON.pa
  document.getElementById("zscen").onchange=e=>{zScen=e.target.value;recolorZones();};
  document.querySelectorAll("#zmetric button").forEach(b=>b.onclick=()=>{zMetric=b.dataset.m;
    document.querySelectorAll("#zmetric button").forEach(x=>x.classList.toggle("on",x===b));recolorZones();});
- sel.value=IDX.ciudades.find(c=>c.slug==="gran_concepcion")?"gran_concepcion":IDX.ciudades[0].slug;
- load(sel.value);
+ if(!document.documentElement.classList.contains("embed")){
+   sel.value=IDX.ciudades.find(c=>c.slug==="gran_concepcion")?"gran_concepcion":IDX.ciudades[0].slug;
+   load(sel.value);
+ } else if(window.__embedApplyPending){ window.__embedApplyPending(); }   // ya hay índice: aplica la ciudad del padre
 });
 function load(slug){fetch("data/proyecciones_uso/"+slug+".json").then(r=>r.text()).then(t=>{CUR=JSON.parse(t.replace(/\bNaN\b/g,"null"));render();drawZoneMap(slug);});}
 function render(){const o=CUR;if(!o)return;
@@ -211,12 +213,16 @@ function hideEvo(){document.getElementById("evoPop").style.display="none";if(evo
 (function(){if(!new URLSearchParams(location.search).has("embed"))return;
  function postH(){try{parent.postMessage({__tendH:true,h:document.documentElement.scrollHeight+24},"*");}catch(e){}}
  window.__postH=postH;
- window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.usos)return;
-   var slug=d.usos,ok=(typeof IDX!=="undefined"&&IDX&&IDX.ciudades.some(function(c){return c.slug===slug;}));
-   if(ok){var sel=document.getElementById("city");if(sel)sel.value=slug;try{load(slug);}catch(err){}}
-   else{document.getElementById("kpis").innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="l">Sin proyección de uso de suelo por zona para <b>'+(d.name||slug)+'</b>. Disponible en áreas metropolitanas y comunas con catastro SII.</div></div>';
+ var pending=null;
+ function apply(slug,name){
+   if(typeof IDX==="undefined"||!IDX||!IDX.ciudades){pending=[slug,name];return;}   // aún sin índice: queda pendiente
+   if(IDX.ciudades.some(function(c){return c.slug===slug;})){var sel=document.getElementById("city");if(sel)sel.value=slug;try{load(slug);}catch(err){}}
+   else{document.getElementById("kpis").innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="l">Sin proyección de uso de suelo por zona para <b>'+(name||slug)+'</b>. Disponible en áreas metropolitanas y comunas con catastro SII.</div></div>';
         var tb=document.getElementById("tbl");if(tb)tb.innerHTML="";var mp=document.getElementById("map");if(mp)mp.style.display="none";}
-   setTimeout(postH,500);setTimeout(postH,1400);});
+   setTimeout(postH,500);setTimeout(postH,1400);
+ }
+ window.__embedApplyPending=function(){if(pending){var p=pending;pending=null;apply(p[0],p[1]);}};
+ window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.usos)return;apply(d.usos,d.name);});
  try{new ResizeObserver(postH).observe(document.body);}catch(e){}
  window.addEventListener("load",function(){setTimeout(postH,500);setTimeout(postH,1500);});
 })();

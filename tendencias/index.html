@@ -100,7 +100,10 @@ Promise.all([
  document.querySelectorAll("#zyear button").forEach(b=>b.onclick=()=>{zYear=b.dataset.y;
    document.querySelectorAll("#zyear button").forEach(x=>x.classList.toggle("on",x===b));recolorZ();});
  initMap(); drawMap();
- sel.value="8101"; load("8101");
+ // si va embebido en la plataforma, NO cargar la ciudad por defecto: la define el menú global
+ // (evita que el init asíncrono sobrescriba la ciudad ya sincronizada por el padre).
+ if(!document.documentElement.classList.contains("embed")){ sel.value="8101"; load("8101"); }
+ else if(window.__lastDemo){ sel.value=window.__lastDemo; }   // refleja la ciudad ya sincronizada en el selector (oculto)
 });
 let CURDEM,CURENV;
 function load(id){CURDEM=null;CURENV=null;
@@ -221,7 +224,7 @@ function drawMap(){const mode=document.getElementById("mapsel").value;
  function postH(){try{parent.postMessage({__tendH:true,h:document.documentElement.scrollHeight+24},"*");}catch(e){}}
  window.__postH=postH;
  window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.demo)return;
-   var sel=document.getElementById("sel");
+   window.__lastDemo=d.demo;var sel=document.getElementById("sel");
    if(sel&&[...sel.options].some(function(o){return o.value===d.demo;}))sel.value=d.demo;
    try{load(d.demo);}catch(err){}
    setTimeout(postH,500);setTimeout(postH,1400);});
