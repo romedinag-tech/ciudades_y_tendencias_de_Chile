@@ -142,10 +142,12 @@ fetch("data/proyecciones_uso_index.json").then(r=>r.text()).then(t=>{IDX=JSON.pa
  document.getElementById("zscen").onchange=e=>{zScen=e.target.value;recolorZones();};
  document.querySelectorAll("#zmetric button").forEach(b=>b.onclick=()=>{zMetric=b.dataset.m;
    document.querySelectorAll("#zmetric button").forEach(x=>x.classList.toggle("on",x===b));recolorZones();});
+ var _defSlug=function(){return IDX.ciudades.find(c=>c.slug==="gran_concepcion")?"gran_concepcion":IDX.ciudades[0].slug;};
  if(!document.documentElement.classList.contains("embed")){
-   sel.value=IDX.ciudades.find(c=>c.slug==="gran_concepcion")?"gran_concepcion":IDX.ciudades[0].slug;
-   load(sel.value);
- } else if(window.__embedApplyPending){ window.__embedApplyPending(); }   // ya hay índice: aplica la ciudad del padre
+   sel.value=_defSlug(); load(sel.value);
+ } else if(window.__embedApplyPending){ window.__embedApplyPending(); }   // mensaje del padre ya llegó: aplícalo
+ else { // embebido sin mensaje aún: si el padre no postea en 1.5s, carga una por defecto (anti-pantalla en blanco ante caché)
+   setTimeout(function(){ if(!window.__embedUsos){ var sl=_defSlug(); sel.value=sl; load(sl); } },1500); }
 });
 function load(slug){fetch("data/proyecciones_uso/"+slug+".json").then(r=>r.text()).then(t=>{CUR=JSON.parse(t.replace(/\bNaN\b/g,"null"));render();drawZoneMap(slug);});}
 function render(){const o=CUR;if(!o)return;
@@ -231,7 +233,7 @@ function hideEvo(){document.getElementById("evoPop").style.display="none";if(evo
    setTimeout(postH,500);setTimeout(postH,1400);
  }
  window.__embedApplyPending=function(){if(pending){var p=pending;pending=null;apply(p[0],p[1]);}};
- window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.usos)return;apply(d.usos,d.name);});
+ window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.usos)return;window.__embedUsos=d.usos;apply(d.usos,d.name);});
  try{new ResizeObserver(postH).observe(document.body);}catch(e){}
  window.addEventListener("load",function(){setTimeout(postH,500);setTimeout(postH,1500);});
 })();
