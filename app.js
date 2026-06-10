@@ -240,6 +240,7 @@ function buildRegionNav(){
   window.scrollTo({top:0,behavior:"smooth"});};});
  const tg=document.getElementById("sbToggle");
  if(tg)tg.onclick=()=>document.getElementById("regionnav").classList.toggle("collapsed");
+ if(window.innerWidth<=900)document.getElementById("regionnav").classList.add("collapsed");  // móvil/tablet: el menú de regiones parte plegado (se abre con ☰)
 }
 function updateRegionNavActive(){const list=document.getElementById("rn-list");if(!list||!S.sel)return;
  const key=S.sel.type==="metro"?("m:"+S.sel.key):("c:"+S.sel.key);

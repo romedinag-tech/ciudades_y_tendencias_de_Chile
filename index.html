@@ -32,6 +32,8 @@ header p{margin:3px 0;opacity:.92;font-size:.95rem}
 .tabs button{border:none;background:none;padding:15px 18px;cursor:pointer;font-size:.95rem;font-weight:700;color:var(--mut);border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs button.on{color:var(--navy);border-bottom-color:var(--or)}
 .tabs button:hover{color:var(--navy)}
+.tabs button .ti{margin-right:6px;font-size:1.05em;line-height:1}
+.tabs button.on .ti{filter:none}
 /* ---- layout con menú lateral de regiones ---- */
 .layout{display:flex;max-width:1340px;margin:0 auto;align-items:flex-start}
 .sidebar{width:256px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:14px 8px 30px}
@@ -129,6 +131,41 @@ td.best{color:var(--green);font-weight:700} td.worst{color:var(--red)}
 footer{padding:30px 0;color:var(--mut);font-size:.85rem;text-align:center;border-top:1px solid var(--line);margin-top:20px}
 a{color:var(--navy)}
 .loading{padding:40px;text-align:center;color:var(--mut)}
+/* ---- móvil (no afecta el escritorio) ---- */
+@media(max-width:640px){
+  header{padding:22px 16px 18px}
+  header h1{font-size:1.3rem;letter-spacing:-.3px}
+  header p{font-size:.85rem}
+  .selbar{padding:12px 14px;gap:10px}
+  .selbar .field{min-width:0}
+  #cbox{font-size:1rem;padding:10px 12px}
+  .selbar .ctxt{font-size:.8rem;min-width:0}
+  .tablewrap{max-width:100%}
+  /* pestañas: barra deslizable horizontal (no se apilan en muchas filas) */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;padding:0 8px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{padding:12px 12px;font-size:.85rem;white-space:nowrap;flex:0 0 auto}
+  .tabs button .ti{font-size:1.1em;margin-right:5px}
+  .panel{padding:22px 0}
+  h2{font-size:1.22rem}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px}
+  .kpi{padding:13px}.kpi .v{font-size:1.4rem}
+  .chartbox,.cmp-pick,.panelctrl{padding:14px}
+  .cwrap{height:280px}
+  .two .cwrap{height:300px}
+  .map{height:430px}
+  .panelctrl{gap:10px}
+  .panelctrl select,.kpisel,.addrow input{min-width:0;width:100%}
+  .grp-hd{font-size:1rem}
+  .tendframe{min-height:540px}
+  footer{padding:24px 14px;font-size:.8rem}
+}
+/* pantallas muy angostas: sólo iconos en las pestañas (el título de cada sección guía) */
+@media(max-width:430px){
+  .tabs button .tl{display:none}
+  .tabs button{padding:13px 14px;font-size:1.15rem}
+  .tabs button .ti{margin-right:0}
+}
 </style>
 </head>
 <body>
@@ -154,13 +191,13 @@ a{color:var(--navy)}
 <div class="content">
 <button class="sb-toggle" id="sbToggle">☰ Explorar por región</button>
 <nav class="tabs">
-  <button data-tab="resumen" class="on">Resumen</button>
-  <button data-tab="oferta">Oferta de servicios por habitante</button>
-  <button data-tab="dinamica">Dinámica de crecimiento</button>
-  <button data-tab="comparar">Comparar ciudades</button>
-  <button data-tab="ranking">Ranking</button>
-  <button data-tab="tend-demo">Tendencias demográficas</button>
-  <button data-tab="tend-suelo">Tendencias de uso de suelo</button>
+  <button data-tab="resumen" class="on"><span class="ti">📋</span><span class="tl">Resumen</span></button>
+  <button data-tab="oferta"><span class="ti">🏥</span><span class="tl">Oferta de servicios por habitante</span></button>
+  <button data-tab="dinamica"><span class="ti">📈</span><span class="tl">Dinámica de crecimiento</span></button>
+  <button data-tab="comparar"><span class="ti">⚖️</span><span class="tl">Comparar ciudades</span></button>
+  <button data-tab="ranking"><span class="ti">🏆</span><span class="tl">Ranking</span></button>
+  <button data-tab="tend-demo"><span class="ti">👥</span><span class="tl">Tendencias demográficas</span></button>
+  <button data-tab="tend-suelo"><span class="ti">🏗️</span><span class="tl">Tendencias de uso de suelo</span></button>
 </nav>
 
 <main class="wrap">
@@ -294,14 +331,14 @@ a{color:var(--navy)}
   <!-- ============ TENDENCIAS DEMOGRÁFICAS ============ -->
   <section class="panel" id="p-tend-demo">
     <h2>Tendencias demográficas · 2030 / 2035<span class="bar"></span></h2>
-    <p class="lead">Proyección de población, vivienda y <b>envejecimiento</b> por comuna y área metropolitana (índice 65+/&lt;15 por zona y peak poblacional). <b>Ejercicio estadístico provisional</b>: no incorpora los instrumentos de planificación territorial (planes reguladores).</p>
+    <p class="lead">Proyección de población, vivienda y <b>envejecimiento</b> por comuna y área metropolitana (índice 65+/&lt;15 por zona y peak poblacional). El visor entrega la <b>tendencia estadística base a escala nacional</b>; la capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</p>
     <iframe class="tendframe" id="if-demo" data-src="tendencias/index.html?embed=1" title="Tendencias demográficas" loading="lazy"></iframe>
   </section>
 
   <!-- ============ TENDENCIAS DE USO DE SUELO ============ -->
   <section class="panel" id="p-tend-suelo">
     <h2>Tendencias de uso de suelo · 2030 / 2035<span class="bar"></span></h2>
-    <p class="lead">Proyección de m² construidos por uso (Habitacional, Comercio, Educación, Salud, Oficina, Industria) a nivel de zona, con escenarios. <b>Ejercicio estadístico provisional</b>: no incorpora los instrumentos de planificación territorial (planes reguladores).</p>
+    <p class="lead">Proyección de m² construidos por uso (Habitacional, Comercio, Educación, Salud, Oficina, Industria) a nivel de zona, con escenarios. El visor entrega la <b>tendencia estadística base a escala nacional</b>; la capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</p>
     <iframe class="tendframe" id="if-suelo" data-src="tendencias/usos.html?embed=1" title="Tendencias de uso de suelo" loading="lazy"></iframe>
   </section>
 

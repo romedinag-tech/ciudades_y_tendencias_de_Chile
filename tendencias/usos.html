@@ -37,11 +37,20 @@ footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
 .embed .warn,.embed header,.embed .nav,.embed footer{display:none!important}
 .embed .panel>div:first-child{display:none!important}
 .embed body{background:transparent}.embed .wrap{padding-top:6px}
+@media(max-width:560px){
+  header{padding:18px 16px}h1{font-size:1.25rem}
+  .panel{padding:12px 14px}select{min-width:0;width:100%}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .grid{gap:12px}.cwrap{height:260px}
+  #map{height:380px}
+  #zctrls{gap:10px}#zctrls select{min-width:0}
+  #evoPop{width:280px}#evoPop .ec{height:150px}
+}
 </style>
 <script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
 </head>
 <body>
-<div class="warn">⚠ <b>Ejercicio estadístico provisional.</b> Proyección de tendencias de construcción; <b>no incorpora los instrumentos de planificación territorial (planes reguladores)</b> que imponen restricciones al crecimiento, ni constituye un pronóstico oficial.</div>
+<div class="warn">El visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</div>
 <div class="nav"><a href="index.html">👥 Tendencias demográficas</a><a href="usos.html" class="on">🏗️ Tendencias de uso de suelo</a></div>
 <header><div class="wrap">
   <h1>Tendencias de uso de suelo · 2030 / 2035</h1>
