@@ -328,7 +328,7 @@ const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
 function applyChartTheme(){if(!window.Chart)return;const d=isDark();Chart.defaults.color=d?"#a9c0de":"#5e6e80";Chart.defaults.borderColor=d?"rgba(140,165,200,.14)":"rgba(20,40,70,.07)";}
-function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}}
+function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
 function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
@@ -646,6 +646,76 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
+   TAB · ECONOMÍA (avalúo / contribuciones, serie 2021–2025 + proyección)
+   ================================================================= */
+let ecoC1=null,ecoC2=null,ecoC3=null,ecoLoaded=false;
+function fmtCLP(mm){ // mm = millones CLP
+ if(mm==null)return "s/d";
+ if(mm>=1e6)return (mm/1e6).toLocaleString('es-CL',{maximumFractionDigits:2})+" billones";
+ if(mm>=1e3)return (mm/1e3).toLocaleString('es-CL',{maximumFractionDigits:1})+" mil MM";
+ return Math.round(mm).toLocaleString('es-CL')+" MM";}
+function ecoProj(series,t){const ys=series.filter(v=>v>0);if(ys.length<3)return{pt:[],pv:[]};
+ const r=ys.slice(-4);let g=Math.pow(r[r.length-1]/r[0],1/(r.length-1));g=Math.min(Math.max(g,0.99),1.06);
+ let last=ys[ys.length-1],y=+t[t.length-1].slice(0,4),s=+t[t.length-1].slice(-1);
+ const pt=[],pv=[];for(let k=0;k<2;k++){s++;if(s>2){s=1;y++;}last=Math.round(last*g);pt.push(y+"-S"+s);pv.push(last);}return{pt,pv};}
+function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
+ if(s.type==="comuna"){const r=S.eco[s.key];return r?{t:r.t,avaluo:r.avaluo_mm,contrib:r.contrib_mm,npred:r.npred,proj_t:r.proj_t,proj:r.proj_avaluo_mm,members:[s.key]}:null;}
+ const recs=(S.metros[s.key]||[]).map(c=>S.eco[c]).filter(Boolean);if(!recs.length)return null;
+ const t=recs[0].t,n=t.length,sum=key=>{const o=Array(n).fill(0);recs.forEach(r=>{for(let i=0;i<n;i++)o[i]+=(r[key][i]||0);});return o;};
+ const av=sum("avaluo_mm"),ct=sum("contrib_mm"),np=sum("npred"),pj=ecoProj(av,t);
+ return {t,avaluo:av,contrib:ct,npred:np,proj_t:pj.pt,proj:pj.pv,members:recs.map(r=>r.cut)};}
+function renderEconomia(){
+ if(!ecoLoaded){getJSON("data/economia/comunas.json").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
+   .catch(()=>{document.getElementById("eco-kpis").innerHTML='<div class="note">Serie económica no disponible.</div>';});return;}
+ drawEco();}
+function drawEco(){const d=ecoSeries();
+ const kp=document.getElementById("eco-kpis");
+ document.getElementById("eco-title").firstChild.textContent="Economía: avalúo fiscal y contribuciones — "+(S.sel?S.sel.name:"");
+ if(!d){kp.innerHTML='<div class="note">Sin serie de avalúo para esta selección (requiere catastro SII enriquecido).</div>';
+   [ecoC1,ecoC2,ecoC3].forEach(c=>c&&c.destroy());ecoC1=ecoC2=ecoC3=null;return;}
+ const a0=d.avaluo[0],a1=d.avaluo[d.avaluo.length-1],crec=a0>0?100*(a1-a0)/a0:null;
+ const ct1=d.contrib[d.contrib.length-1],np1=d.npred[d.npred.length-1];
+ const card=(v,l,s,col)=>'<div class="kpi"><div class="v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';
+ kp.innerHTML='<div class="kpis">'+
+   card(fmtCLP(a1),"Avalúo fiscal total","al "+d.t[d.t.length-1])+
+   card((crec>=0?"+":"")+fmt(crec,1)+"%","Crecimiento del avalúo",d.t[0]+" → "+d.t[d.t.length-1],crec>=0?GREEN:RED)+
+   card(fmtCLP(ct1),"Contribuciones del semestre","impuesto territorial girado")+
+   card(fmtN(np1),"Predios catastrados","al "+d.t[d.t.length-1])+'</div>';
+ // C1 avalúo + proyección
+ const labels=d.t.concat(d.proj_t);
+ const hist=d.avaluo.concat(d.proj_t.map(()=>null));
+ const pj=d.t.map(()=>null);pj[d.t.length-1]=d.avaluo[d.avaluo.length-1];d.proj.forEach(v=>pj.push(v));
+ if(ecoC1)ecoC1.destroy();
+ ecoC1=new Chart(document.getElementById("eco-c1"),{type:"line",data:{labels,datasets:[
+   {label:"Avalúo (observado)",data:hist,borderColor:NAVY,backgroundColor:NAVY,tension:.2,pointRadius:3,borderWidth:3,spanGaps:false},
+   {label:"Proyección",data:pj,borderColor:OR,backgroundColor:OR,borderDash:[6,4],tension:.2,pointRadius:3,borderWidth:2,spanGaps:true,datalabels:{display:false}}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmtCLP(c.parsed.y)+" CLP"}}},
+   scales:{y:{title:{display:true,text:"avalúo (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
+ // C2 contribuciones
+ if(ecoC2)ecoC2.destroy();
+ ecoC2=new Chart(document.getElementById("eco-c2"),{type:"bar",data:{labels:d.t,datasets:[
+   {label:"Contribución semestral",data:d.contrib,backgroundColor:TEAL}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>fmtCLP(c.parsed.y)+" CLP"}}},
+   scales:{y:{title:{display:true,text:"contribuciones (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
+ // C3 contexto nacional: crecimiento del avalúo por comuna (top 25), destaca la selección
+ const sel=new Set(d.members.map(String));
+ const all=Object.values(S.eco).filter(c=>c.crec_total_pct!=null).sort((a,b)=>b.crec_total_pct-a.crec_total_pct);
+ const top=all.slice(0,25);
+ // asegura que las comunas seleccionadas aparezcan aunque no estén en el top
+ d.members.forEach(c=>{if(S.eco[c]&&!top.includes(S.eco[c]))top.push(S.eco[c]);});
+ top.sort((a,b)=>b.crec_total_pct-a.crec_total_pct);
+ if(ecoC3)ecoC3.destroy();
+ ecoC3=new Chart(document.getElementById("eco-c3"),{type:"bar",data:{labels:top.map(c=>c.nombre),datasets:[
+   {data:top.map(c=>c.crec_total_pct),backgroundColor:top.map(c=>sel.has(String(c.cut))?OR:NAVY2)}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>"+"+fmt(c.parsed.x,1)+"% ("+top[c.dataIndex].t[0]+"→"+top[c.dataIndex].t[top[c.dataIndex].t.length-1]+")"}}},
+   scales:{x:{title:{display:true,text:"crecimiento del avalúo total 2021→2025 (%)"}}}}});
+ document.getElementById("eco-c3s").innerHTML="Variación del avalúo total entre "+d.t[0]+" y "+d.t[d.t.length-1]+". <b style='color:"+OR+"'>En naranjo, tu selección.</b>";
+}
+
+/* =================================================================
    TAB 4 · COMPARAR CIUDADES
    ================================================================= */
 const CMP={items:[],kpi:"m2pp_comercio",kx:"dens_hab_ha",ky:"m2pp_comercio",map:null,layer:null,legend:null,rank:null,scatter:null};
@@ -934,6 +1004,7 @@ function activateTab(t){
  if(t==="dinamica"&&dMap)setTimeout(()=>{dMap.invalidateSize();if(dLayer&&dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});},80);
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
+ if(t==="economia")renderEconomia();
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
  writeURL();
