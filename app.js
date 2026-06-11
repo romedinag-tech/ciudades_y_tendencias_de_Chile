@@ -665,7 +665,7 @@ function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
  const av=sum("avaluo_mm"),ct=sum("contrib_mm"),np=sum("npred"),pj=ecoProj(av,t);
  return {t,avaluo:av,contrib:ct,npred:np,proj_t:pj.pt,proj:pj.pv,members:recs.map(r=>r.cut)};}
 function renderEconomia(){
- if(!ecoLoaded){getJSON("data/economia/comunas.json?v=3").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
+ if(!ecoLoaded){getJSON("data/economia/comunas.json?v=4").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
    .catch(()=>{document.getElementById("eco-kpis").innerHTML='<div class="note">Serie económica no disponible.</div>';});return;}
  drawEco();}
 function drawEco(){const d=ecoSeries();
@@ -681,24 +681,30 @@ function drawEco(){const d=ecoSeries();
    card((crec>=0?"+":"")+fmt(crec,1)+"%","Crecimiento del avalúo",d.t[0]+" → "+d.t[d.t.length-1],crec>=0?GREEN:RED)+
    card(fmtCLP(ct1),"Contribuciones del semestre","impuesto territorial girado")+
    card(fmtN(np1),"Predios catastrados","al "+d.t[d.t.length-1])+'</div>';
- // C1 avalúo + proyección
+ // C1 avalúo + proyección + línea IPC (UF)
  const labels=d.t.concat(d.proj_t);
  const hist=d.avaluo.concat(d.proj_t.map(()=>null));
  const pj=d.t.map(()=>null);pj[d.t.length-1]=d.avaluo[d.avaluo.length-1];d.proj.forEach(v=>pj.push(v));
+ // contrafactual: avalúo inicial reajustado solo por IPC (UF al inicio de cada semestre)
+ const uf=(S.ecoMeta&&S.ecoMeta.ipc_uf)||{};const uf0=uf[d.t[0]];
+ const ipc=d.t.map(t=>(uf0&&uf[t])?Math.round(d.avaluo[0]*uf[t]/uf0):null).concat(d.proj_t.map(()=>null));
+ // eje X: mostrar solo el año (en el S1), manteniendo todos los puntos semestrales
+ const xYears={ticks:{autoSkip:false,maxRotation:0,callback:function(v){const l=this.getLabelForValue(v);return /-S1$/.test(l)?l.slice(0,4):"";}}};
  if(ecoC1)ecoC1.destroy();
  ecoC1=new Chart(document.getElementById("eco-c1"),{type:"line",data:{labels,datasets:[
    {label:"Avalúo (observado)",data:hist,borderColor:NAVY,backgroundColor:NAVY,tension:.2,pointRadius:3,borderWidth:3,spanGaps:false},
-   {label:"Proyección",data:pj,borderColor:OR,backgroundColor:OR,borderDash:[6,4],tension:.2,pointRadius:3,borderWidth:2,spanGaps:true,datalabels:{display:false}}]},
+   {label:"Proyección",data:pj,borderColor:OR,backgroundColor:OR,borderDash:[6,4],tension:.2,pointRadius:3,borderWidth:2,spanGaps:true,datalabels:{display:false}},
+   {label:"Si solo siguiera al IPC (UF)",data:ipc,borderColor:"#8696a7",backgroundColor:"#8696a7",borderDash:[3,3],tension:.2,pointRadius:0,borderWidth:2,spanGaps:true,datalabels:{display:false}}]},
   options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},datalabels:{display:false},
    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmtCLP(c.parsed.y)+" CLP"}}},
-   scales:{y:{title:{display:true,text:"avalúo (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
+   scales:{x:xYears,y:{title:{display:true,text:"avalúo (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
  // C2 contribuciones
  if(ecoC2)ecoC2.destroy();
  ecoC2=new Chart(document.getElementById("eco-c2"),{type:"bar",data:{labels:d.t,datasets:[
    {label:"Contribución semestral",data:d.contrib,backgroundColor:TEAL}]},
   options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
    tooltip:{callbacks:{label:c=>fmtCLP(c.parsed.y)+" CLP"}}},
-   scales:{y:{title:{display:true,text:"contribuciones (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
+   scales:{x:xYears,y:{title:{display:true,text:"contribuciones (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
  // C3 contexto nacional: crecimiento del avalúo por comuna (top 25), destaca la selección
  const sel=new Set(d.members.map(String));
  const all=Object.values(S.eco).filter(c=>c.crec_total_pct!=null).sort((a,b)=>b.crec_total_pct-a.crec_total_pct);

@@ -427,7 +427,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
     <div class="two">
       <div class="chartbox">
         <h3>Avalúo fiscal total — evolución y proyección</h3>
-        <p>Suma del avalúo de todos los predios (millones CLP). El tramo punteado es una estimación de tendencia.</p>
+        <p>Suma del avalúo de todos los predios (millones CLP). El tramo punteado naranjo es una estimación de tendencia. La <b style="color:#8696a7">línea gris</b> muestra cómo habría evolucionado el avalúo si solo se reajustara por <b>IPC</b> (UF, Banco Central): la brecha sobre ella es apreciación real más obra nueva.</p>
         <div class="cwrap"><canvas id="eco-c1"></canvas></div>
       </div>
       <div class="chartbox">
@@ -494,6 +494,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
