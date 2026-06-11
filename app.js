@@ -831,6 +831,15 @@ function odCentroid(f){let sx=0,sy=0,n=0;const g=f.geometry;
  const polys=g.type==="Polygon"?[g.coordinates]:g.coordinates;
  polys.forEach(p=>p[0].forEach(c=>{sx+=c[0];sy+=c[1];n++;}));
  return n?[sy/n,sx/n]:null;}
+// triángulo (cabeza de flecha) sobre la línea p1->p2, en la fracción frac, tamaño en grados
+function odArrow(p1,p2,frac,size){
+ const kx=Math.cos(p1[0]*Math.PI/180)||1;
+ const X1=p1[1]*kx,Y1=p1[0],X2=p2[1]*kx,Y2=p2[0];
+ let ux=X2-X1,uy=Y2-Y1;const m=Math.hypot(ux,uy)||1;ux/=m;uy/=m;
+ const Xt=X1+frac*(X2-X1),Yt=Y1+frac*(Y2-Y1);
+ const Xb=Xt-size*ux,Yb=Yt-size*uy,w=size*0.62,px=-uy,py=ux;
+ const toLL=(X,Y)=>[Y,X/kx];
+ return [toLL(Xb+w*px,Yb+w*py),toLL(Xt,Yt),toLL(Xb-w*px,Yb-w*py)];}
 function renderOD(){const s=S.sel;
  const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
  const load=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
@@ -861,10 +870,18 @@ function odFlowMap(d){const s=S.sel;
   const w=Math.max(1.4,12*Math.sqrt(tot/maxF));
   const na=titleCase(S.byCut[e.a].comuna),nb=titleCase(S.byCut[e.b].comuna);
   const ln=L.polyline([cen[e.a],cen[e.b]],{color:OR,weight:w,opacity:.55});
-  ln.bindPopup('<b>'+na+' ⇄ '+nb+'</b><br>'+na+' → '+nb+': <b>'+fmtN(e.ab)+'</b><br>'+nb+' → '+na+': <b>'+fmtN(e.ba)+'</b>');
+  // sentido dominante (hacia la comuna que recibe más trabajadores del par)
+  const fwd=e.ab>=e.ba, o=fwd?e.a:e.b, dst=fwd?e.b:e.a;
+  const dom=Math.max(e.ab,e.ba), sub=Math.min(e.ab,e.ba);
+  const dno=titleCase(S.byCut[o].comuna), dnd=titleCase(S.byCut[dst].comuna);
+  ln.bindPopup('<b>'+na+' ⇄ '+nb+'</b><br>'+na+' → '+nb+': <b>'+fmtN(e.ab)+'</b><br>'+nb+' → '+na+': <b>'+fmtN(e.ba)+'</b>'+
+    '<br><span style="color:'+OR+'">▶ sentido dominante: '+dno+' → '+dnd+' (+'+fmtN(dom-sub)+' netos)</span>');
   ln.on("mouseover",()=>ln.setStyle({opacity:.9,color:"#1f4e79"}));
   ln.on("mouseout",()=>ln.setStyle({opacity:.55,color:OR}));
-  items.push(ln);});
+  items.push(ln);
+  // cabeza de flecha hacia el sentido dominante (tamaño leve según magnitud)
+  const tri=odArrow(cen[o],cen[dst],0.58,0.0055+0.004*Math.sqrt(tot/maxF));
+  items.push(L.polygon(tri,{color:"#fff",weight:1,fillColor:"#1f4e79",fillOpacity:.9,interactive:false}));});
  // marcador con nombre en cada comuna
  Object.keys(cen).forEach(c=>{items.push(L.marker(cen[c],{interactive:false,icon:L.divIcon({className:"od-lbl",
    html:'<span style="font:600 10px Inter,sans-serif;color:#33475c;background:rgba(255,255,255,.75);padding:1px 4px;border-radius:6px;white-space:nowrap">'+titleCase(S.byCut[c].comuna)+'</span>',iconSize:null})}));});
