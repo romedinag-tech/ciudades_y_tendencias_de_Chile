@@ -649,6 +649,9 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    TAB · ECONOMÍA (avalúo / contribuciones, serie 2021–2025 + proyección)
    ================================================================= */
 let ecoC1=null,ecoC2=null,ecoC3=null,ecoLoaded=false;
+// períodos "2022-S1" -> textos sin siglas: año ("2022") o semestre legible ("1er semestre 2022")
+function ecoYr(t){return String(t).slice(0,4);}
+function ecoSem(t){return (/-S2$/.test(t)?"2º semestre ":"1er semestre ")+String(t).slice(0,4);}
 function fmtCLP(mm){ // mm = millones CLP
  if(mm==null)return "s/d";
  if(mm>=1e6)return (mm/1e6).toLocaleString('es-CL',{maximumFractionDigits:2})+" billones";
@@ -677,10 +680,10 @@ function drawEco(){const d=ecoSeries();
  const ct1=d.contrib[d.contrib.length-1],np1=d.npred[d.npred.length-1];
  const card=(v,l,s,col)=>'<div class="kpi"><div class="v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';
  kp.innerHTML='<div class="kpis">'+
-   card(fmtCLP(a1),"Avalúo fiscal total","al "+d.t[d.t.length-1])+
-   card((crec>=0?"+":"")+fmt(crec,1)+"%","Crecimiento del avalúo",d.t[0]+" → "+d.t[d.t.length-1],crec>=0?GREEN:RED)+
+   card(fmtCLP(a1),"Avalúo fiscal total","al "+ecoSem(d.t[d.t.length-1]))+
+   card((crec>=0?"+":"")+fmt(crec,1)+"%","Crecimiento del avalúo",ecoYr(d.t[0])+" → "+ecoYr(d.t[d.t.length-1]),crec>=0?GREEN:RED)+
    card(fmtCLP(ct1),"Contribuciones del semestre","impuesto territorial girado")+
-   card(fmtN(np1),"Predios catastrados","al "+d.t[d.t.length-1])+'</div>';
+   card(fmtN(np1),"Predios catastrados","al "+ecoSem(d.t[d.t.length-1]))+'</div>';
  // C1 avalúo + proyección + línea IPC (UF)
  const labels=d.t.concat(d.proj_t);
  const hist=d.avaluo.concat(d.proj_t.map(()=>null));
@@ -696,14 +699,14 @@ function drawEco(){const d=ecoSeries();
    {label:"Proyección",data:pj,borderColor:OR,backgroundColor:OR,borderDash:[6,4],tension:.2,pointRadius:3,borderWidth:2,spanGaps:true,datalabels:{display:false}},
    {label:"Si solo siguiera al IPC (UF)",data:ipc,borderColor:"#8696a7",backgroundColor:"#8696a7",borderDash:[3,3],tension:.2,pointRadius:0,borderWidth:2,spanGaps:true,datalabels:{display:false}}]},
   options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},datalabels:{display:false},
-   tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmtCLP(c.parsed.y)+" CLP"}}},
+   tooltip:{callbacks:{title:items=>ecoSem(items[0].label),label:c=>c.dataset.label+": "+fmtCLP(c.parsed.y)+" CLP"}}},
    scales:{x:xYears,y:{title:{display:true,text:"avalúo (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
  // C2 contribuciones
  if(ecoC2)ecoC2.destroy();
  ecoC2=new Chart(document.getElementById("eco-c2"),{type:"bar",data:{labels:d.t,datasets:[
    {label:"Contribución semestral",data:d.contrib,backgroundColor:TEAL}]},
   options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
-   tooltip:{callbacks:{label:c=>fmtCLP(c.parsed.y)+" CLP"}}},
+   tooltip:{callbacks:{title:items=>ecoSem(items[0].label),label:c=>fmtCLP(c.parsed.y)+" CLP"}}},
    scales:{x:xYears,y:{title:{display:true,text:"contribuciones (millones CLP)"},ticks:{callback:v=>fmtCLP(v)}}}}});
  // C3 contexto nacional: crecimiento del avalúo por comuna (top 25), destaca la selección
  const sel=new Set(d.members.map(String));
@@ -716,9 +719,9 @@ function drawEco(){const d=ecoSeries();
  ecoC3=new Chart(document.getElementById("eco-c3"),{type:"bar",data:{labels:top.map(c=>c.nombre),datasets:[
    {data:top.map(c=>c.crec_total_pct),backgroundColor:top.map(c=>sel.has(String(c.cut))?OR:NAVY2)}]},
   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
-   tooltip:{callbacks:{label:c=>"+"+fmt(c.parsed.x,1)+"% ("+top[c.dataIndex].t[0]+"→"+top[c.dataIndex].t[top[c.dataIndex].t.length-1]+")"}}},
+   tooltip:{callbacks:{label:c=>"+"+fmt(c.parsed.x,1)+"% ("+ecoYr(top[c.dataIndex].t[0])+"→"+ecoYr(top[c.dataIndex].t[top[c.dataIndex].t.length-1])+")"}}},
    scales:{x:{title:{display:true,text:"crecimiento del avalúo total "+d.t[0].slice(0,4)+"→"+d.t[d.t.length-1].slice(0,4)+" (%)"}}}}});
- document.getElementById("eco-c3s").innerHTML="Variación del avalúo total entre "+d.t[0]+" y "+d.t[d.t.length-1]+". <b style='color:"+OR+"'>En naranjo, tu selección.</b>";
+ document.getElementById("eco-c3s").innerHTML="Variación del avalúo total entre "+ecoYr(d.t[0])+" y "+ecoYr(d.t[d.t.length-1])+". <b style='color:"+OR+"'>En naranjo, tu selección.</b>";
  drawEcoMap(dataSlug());
 }
 /* ---- mapa de crecimiento del avalúo por zona (Economía) ---- */
@@ -745,8 +748,8 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
     l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
     const last=p.serie?p.serie[p.serie.length-1]:null;
     l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>'+
-      (p.growth!=null?'Crecimiento '+p.t[0].slice(0,4)+'→'+p.t[p.t.length-1].slice(0,4)+': <b>'+(p.growth>=0?'+':'')+fmt(p.growth,1)+'%</b><br>':'')+
-      (last!=null?'Avalúo '+p.t[p.t.length-1]+': '+fmtCLP(last)+' CLP':'sin dato'));}
+      (p.growth!=null?'Crecimiento '+ecoYr(p.t[0])+'→'+ecoYr(p.t[p.t.length-1])+': <b>'+(p.growth>=0?'+':'')+fmt(p.growth,1)+'%</b><br>':'')+
+      (last!=null?'Avalúo '+ecoYr(p.t[p.t.length-1])+': '+fmtCLP(last)+' CLP':'sin dato'));}
   }).addTo(ecoMap);
   if(ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});
   ecoLegend=L.control({position:"bottomright"});
