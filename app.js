@@ -823,7 +823,72 @@ function renderMovilidad(){const s=S.sel;if(!s)return;
    options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
      tooltip:{callbacks:{label:c=>fmt(c.parsed.x,1)+"% trabaja desde su vivienda"}}},
     scales:{x:{title:{display:true,text:"% de ocupados en teletrabajo"}}}}});}
+ renderOD();
 }
+/* ---- matriz O-D: mapa de flujos (metros) / barras de orígenes-destinos (comunas) ---- */
+let mvOdMap=null,mvOdLayer=null,mvC4=null,mvC5=null;
+function odCentroid(f){let sx=0,sy=0,n=0;const g=f.geometry;
+ const polys=g.type==="Polygon"?[g.coordinates]:g.coordinates;
+ polys.forEach(p=>p[0].forEach(c=>{sx+=c[0];sy+=c[1];n++;}));
+ return n?[sy/n,sx/n]:null;}
+function renderOD(){const s=S.sel;
+ const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
+ const load=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
+ load.then(d=>{
+  if(s.type==="metro"){bars.style.display="none";box.style.display="";odFlowMap(d);}
+  else{box.style.display="none";bars.style.display="";odBars(d,String(s.key));}
+ }).catch(()=>{box.style.display="none";bars.style.display="none";});}
+function odFlowMap(d){const s=S.sel;
+ const cuts=new Set(s.cuts.map(String));
+ // centroides de las comunas del metro
+ const cen={};S.comunasGeo.features.forEach(f=>{const c=String(f.properties.cut);
+  if(cuts.has(c)){const p=odCentroid(f);if(p)cen[c]=p;}});
+ // pares dentro del metro, fusionando ambos sentidos en una línea
+ const pair={};
+ d.pares.forEach(([o,dd,n])=>{if(!cuts.has(o)||!cuts.has(dd))return;
+  const key=o<dd?o+"|"+dd:dd+"|"+o;
+  const e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
+  if(o===e.a)e.ab+=n;else e.ba+=n;});
+ const flows=Object.values(pair).filter(e=>cen[e.a]&&cen[e.b]).sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba)).slice(0,40);
+ if(!mvOdMap){mvOdMap=L.map("mv-odmap",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvOdMap);}
+ if(mvOdLayer){mvOdMap.removeLayer(mvOdLayer);mvOdLayer=null;}
+ const items=[];
+ // polígonos de contexto
+ S.comunasGeo.features.forEach(f=>{if(!cuts.has(String(f.properties.cut)))return;
+  items.push(L.geoJSON(f,{style:{color:"#9aa7b4",weight:1,fillColor:"#9aa7b4",fillOpacity:.08,interactive:false}}));});
+ const maxF=flows.length?flows[0].ab+flows[0].ba:1;
+ flows.forEach(e=>{const tot=e.ab+e.ba;
+  const w=Math.max(1.4,12*Math.sqrt(tot/maxF));
+  const na=titleCase(S.byCut[e.a].comuna),nb=titleCase(S.byCut[e.b].comuna);
+  const ln=L.polyline([cen[e.a],cen[e.b]],{color:OR,weight:w,opacity:.55});
+  ln.bindPopup('<b>'+na+' ⇄ '+nb+'</b><br>'+na+' → '+nb+': <b>'+fmtN(e.ab)+'</b><br>'+nb+' → '+na+': <b>'+fmtN(e.ba)+'</b>');
+  ln.on("mouseover",()=>ln.setStyle({opacity:.9,color:"#1f4e79"}));
+  ln.on("mouseout",()=>ln.setStyle({opacity:.55,color:OR}));
+  items.push(ln);});
+ // marcador con nombre en cada comuna
+ Object.keys(cen).forEach(c=>{items.push(L.marker(cen[c],{interactive:false,icon:L.divIcon({className:"od-lbl",
+   html:'<span style="font:600 10px Inter,sans-serif;color:#33475c;background:rgba(255,255,255,.75);padding:1px 4px;border-radius:6px;white-space:nowrap">'+titleCase(S.byCut[c].comuna)+'</span>',iconSize:null})}));});
+ mvOdLayer=L.layerGroup(items).addTo(mvOdMap);
+ const b=L.latLngBounds(Object.values(cen));if(b.isValid())mvOdMap.fitBounds(b,{padding:[30,30]});
+ setTimeout(()=>mvOdMap.invalidateSize(),60);}
+function odBars(d,cut){
+ const nm=c=>S.byCut[c]?titleCase(S.byCut[c].comuna):c;
+ const dest=d.pares.filter(p=>p[0]===cut).slice(0,8);
+ const orig=d.pares.filter(p=>p[1]===cut).slice(0,8);
+ document.getElementById("mv-od1t").textContent="Dónde trabajan los residentes de "+S.sel.name;
+ document.getElementById("mv-od2t").textContent="De dónde llegan quienes trabajan en "+S.sel.name;
+ if(mvC4)mvC4.destroy();
+ mvC4=new Chart(document.getElementById("mv-c4"),{type:"bar",
+  data:{labels:dest.map(p=>nm(p[1])),datasets:[{data:dest.map(p=>p[2]),backgroundColor:NAVY2}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+    tooltip:{callbacks:{label:c=>fmtN(c.parsed.x)+" ocupados"}}},
+   scales:{x:{title:{display:true,text:"ocupados que van a trabajar allá"}}}}});
+ if(mvC5)mvC5.destroy();
+ mvC5=new Chart(document.getElementById("mv-c5"),{type:"bar",
+  data:{labels:orig.map(p=>nm(p[0])),datasets:[{data:orig.map(p=>p[2]),backgroundColor:TEAL}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+    tooltip:{callbacks:{label:c=>fmtN(c.parsed.x)+" ocupados"}}},
+   scales:{x:{title:{display:true,text:"ocupados que vienen a trabajar acá"}}}}});}
 function ensureMvMap(){if(mvMap)return;
  mvMap=L.map("mv-map",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvMap);}
 function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
@@ -1205,7 +1270,8 @@ function activateTab(t){
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
  if(t==="mapa")renderNmap();
- if(t==="movilidad"){renderMovilidad();if(mvMap)setTimeout(()=>{mvMap.invalidateSize();if(mvLayer&&mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});},80);}
+ if(t==="movilidad"){renderMovilidad();if(mvMap)setTimeout(()=>{mvMap.invalidateSize();if(mvLayer&&mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});},80);
+  if(mvOdMap)setTimeout(()=>mvOdMap.invalidateSize(),100);}
  if(t==="economia"){renderEconomia();if(ecoMap)setTimeout(()=>{ecoMap.invalidateSize();if(ecoLayer&&ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});},80);}
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");

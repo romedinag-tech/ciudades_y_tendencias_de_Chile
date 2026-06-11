@@ -497,7 +497,24 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
         <div class="cwrap" style="height:420px"><canvas id="mv-c3"></canvas></div>
       </div>
     </div>
-    <div class="note" id="mv-note" style="margin-top:14px"><b>Metodología:</b> P45 sobre ocupados que declararon medio de transporte; "movilidad activa" = caminata + bicicleta; "otros" agrupa motocicleta, caballo/lancha/bote y otros. Teletrabajo = trabaja en su propia vivienda (P44). La atracción cuenta a quienes declararon trabajar en una comuna distinta a la de residencia; los sin lugar fijo (~5%) se excluyen. El mapa zonal usa el conteo censal oficial por zona; los % comunales se calculan del microdato.</div>
+    <div class="chartbox" id="mv-odbox" style="margin-top:14px;display:none">
+      <h3>Matriz origen-destino — flujos al trabajo entre comunas</h3>
+      <p>Cada línea une dos comunas del área metropolitana: el <b>grosor</b> indica cuántos ocupados viajan entre ellas. Haz clic en una línea para ver el detalle en ambos sentidos. Se muestran los pares con ≥100 viajes.</p>
+      <div id="mv-odmap" class="map"></div>
+    </div>
+    <div class="two" id="mv-odbars" style="margin-top:14px;display:none">
+      <div class="chartbox">
+        <h3 id="mv-od1t">Dónde trabajan los residentes</h3>
+        <p>Principales comunas de destino de quienes viven aquí y trabajan en otra comuna.</p>
+        <div class="cwrap" style="height:340px"><canvas id="mv-c4"></canvas></div>
+      </div>
+      <div class="chartbox">
+        <h3 id="mv-od2t">De dónde llegan los trabajadores</h3>
+        <p>Principales comunas de origen de quienes trabajan aquí y viven en otra comuna.</p>
+        <div class="cwrap" style="height:340px"><canvas id="mv-c5"></canvas></div>
+      </div>
+    </div>
+    <div class="note" id="mv-note" style="margin-top:14px"><b>Metodología:</b> P45 sobre ocupados que declararon medio de transporte; "movilidad activa" = caminata + bicicleta; "otros" agrupa motocicleta, caballo/lancha/bote y otros. Teletrabajo = trabaja en su propia vivienda (P44). La atracción cuenta a quienes declararon trabajar en una comuna distinta a la de residencia; los sin lugar fijo (~5%) se excluyen. El mapa zonal usa el conteo censal oficial por zona; los % comunales se calculan del microdato. La matriz O-D publica pares con ≥100 viajes (representa el 91% de los conmutantes).</div>
   </section>
 
   <!-- ============ TENDENCIAS DEMOGRÁFICAS ============ -->
@@ -545,6 +562,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
