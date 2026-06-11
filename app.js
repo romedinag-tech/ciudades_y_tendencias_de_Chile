@@ -58,7 +58,10 @@ const KPI={
  pct_8pisos: {lbl:"Predios de 8+ pisos (verticalización)",grp:"Uso de suelo (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"n_predios",sii:true,ramp:"BuPu",log:false},
  ratio_depto_casa:{lbl:"Ratio departamento ÷ casa (construido)",grp:"Uso de suelo (Catastro SII)",u:"",dec:2,agg:"wmean",wt:"n_predios",sii:true,ramp:"PuBu",log:false},
  anio_mediano:{lbl:"Antigüedad — año de construcción mediano",grp:"Uso de suelo (Catastro SII)",u:"",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"OrRd",log:false},
- valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true}
+ valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true},
+ avaluo_total:{lbl:"Avalúo fiscal total",grp:"Avalúo fiscal (Catastro SII)",u:"millones CLP",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
+ avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
+ pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false}
 };
 // indicadores que existen a nivel zona censal (para el módulo Oferta)
 const ZKEYS=["nse_score","dens_hab_ha","pct_depto","per_hog","pct_60mas","pct_inmig","escol","pct_hacin","pct_arriendo",
@@ -136,7 +139,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json"),
+ getJSON("data/kpis_comunas.json?v=2"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
@@ -309,6 +312,8 @@ function renderResumen(){const s=S.sel;
  let h='<div class="grp-hd">Demografía y vivienda (Censo 2024)</div><div class="kpis">'+nseCard+demog.map(k=>kpiCard(k)).join("")+'</div>';
  h+='<div class="grp-hd">Ingreso y pobreza (CASEN 2024)</div><div class="kpis">'+casen.map(k=>kpiCard(k)).join("")+'</div>';
  if(hasSii)h+='<div class="grp-hd">Uso de suelo — uso efectivo (Catastro SII)</div><div class="kpis">'+sii.map(k=>kpiCard(k)).join("")+'</div>';
+ const avaluo=["avaluo_total","avaluo_pp","pct_exento"];
+ if(s.rows.some(r=>num(r.avaluo_total)!=null))h+='<div class="grp-hd">Avalúo fiscal (Catastro SII)</div><div class="kpis">'+avaluo.map(k=>kpiCard(k)).join("")+'</div>';
  document.getElementById("res-kpis").innerHTML=h;
 }
 
@@ -647,7 +652,8 @@ function cmpRefresh(){
 }
 const CMP_ROWS=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","per_hog","pct_60mas","escol",
  "nse_score","casen_ing_pc","casen_pobreza_pct","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo",
- "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med"];
+ "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med",
+ "avaluo_total","avaluo_pp","pct_exento"];
 function cmpTable(){const w=document.getElementById("cmp-tablewrap");
  if(!CMP.items.length){w.innerHTML='<div class="loading">Sin ciudades seleccionadas.</div>';return;}
  let h='<table><thead><tr><th>Indicador</th>'+CMP.items.map(it=>'<th>'+it.name+'</th>').join("")+
@@ -790,6 +796,10 @@ const RANKDIMS=[
  {g:"Uso de suelo y servicios",k:"m2pp_tot",src:"k",dir:"desc",lbl:"Más suelo construido por habitante"},
  {g:"Uso de suelo y servicios",k:"pct_8pisos",src:"k",dir:"desc",lbl:"Más verticalizadas (predios 8+ pisos)"},
  {g:"Uso de suelo y servicios",k:"valor_suelo_med",src:"k",dir:"desc",lbl:"Suelo más caro"},
+ {g:"Avalúo fiscal (SII)",k:"avaluo_total",src:"k",dir:"desc",lbl:"Mayor avalúo fiscal total"},
+ {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"desc",lbl:"Mayor avalúo fiscal per cápita"},
+ {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"asc",lbl:"Menor avalúo fiscal per cápita"},
+ {g:"Avalúo fiscal (SII)",k:"pct_exento",src:"k",dir:"desc",lbl:"Mayor % de avalúo exento de contribuciones"},
  {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"desc",lbl:"Parque construido más nuevo"},
  {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"asc",lbl:"Parque construido más antiguo"},
  {g:"Dinámica de crecimiento",k:"crec_m2",src:"g",dir:"desc",lbl:"Mayor crecimiento urbano (m² construidos)"},
