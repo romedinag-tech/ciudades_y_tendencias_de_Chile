@@ -713,7 +713,45 @@ function drawEco(){const d=ecoSeries();
    tooltip:{callbacks:{label:c=>"+"+fmt(c.parsed.x,1)+"% ("+top[c.dataIndex].t[0]+"→"+top[c.dataIndex].t[top[c.dataIndex].t.length-1]+")"}}},
    scales:{x:{title:{display:true,text:"crecimiento del avalúo total 2021→2025 (%)"}}}}});
  document.getElementById("eco-c3s").innerHTML="Variación del avalúo total entre "+d.t[0]+" y "+d.t[d.t.length-1]+". <b style='color:"+OR+"'>En naranjo, tu selección.</b>";
+ drawEcoMap(dataSlug());
 }
+/* ---- mapa de crecimiento del avalúo por zona (Economía) ---- */
+let ecoMap=null,ecoLayer=null,ecoLegend=null;
+function ensureEcoMap(){if(ecoMap)return;
+ ecoMap=L.map("eco-map",{preferCanvas:false}).setView([-36.86,-73.03],11);mapChrome(ecoMap);}
+function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
+ if(!slug){box.style.display="none";return;}
+ S.ecoZcache=S.ecoZcache||{};
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json").then(d=>{S.ecoZcache[slug]=d;return d;});
+ Promise.all([geoP,ecoP]).then(([gf,d])=>{
+  const feats=gf.map(f=>{const za=String(f.properties.zona);
+    return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
+      growth:d.growth?d.growth[za]:null,serie:d.zonas?d.zonas[za]:null,t:d.t}};});
+  ensureEcoMap();
+  if(ecoLayer){ecoMap.removeLayer(ecoLayer);ecoLayer=null;}
+  if(ecoLegend){ecoMap.removeControl(ecoLegend);ecoLegend=null;}
+  const cols=R["YlOrRd"],vals=feats.map(f=>f.properties.growth),brk=quant(vals,false);
+  ecoLayer=L.geoJSON({type:"FeatureCollection",features:feats},{
+   style:f=>({color:"#5b6b7b",weight:.5,fillColor:colorFor(f.properties.growth,brk,cols,false),fillOpacity:.82}),
+   onEachFeature:(f,l)=>{const p=f.properties;
+    l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+    l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+    const last=p.serie?p.serie[p.serie.length-1]:null;
+    l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>'+
+      (p.growth!=null?'Crecimiento 2021→2025: <b>'+(p.growth>=0?'+':'')+fmt(p.growth,1)+'%</b><br>':'')+
+      (last!=null?'Avalúo '+p.t[p.t.length-1]+': '+fmtCLP(last)+' CLP':'sin dato'));}
+  }).addTo(ecoMap);
+  if(ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});
+  ecoLegend=L.control({position:"bottomright"});
+  ecoLegend.onAdd=()=>{const dd=L.DomUtil.create("div","legend");
+   let h='<b>Crecimiento avalúo 2021→2025 (%)</b><br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],0)+'%<br>';
+   for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],0)+' – '+fmt(brk[i],0)+'%<br>';
+   h+='<i style="background:'+cols[4]+'"></i>&gt; '+fmt(brk[4],0)+'%<br><i style="background:#d8dde3"></i>s/d';dd.innerHTML=h;return dd;};
+  ecoLegend.addTo(ecoMap);
+  box.style.display="";
+  setTimeout(()=>ecoMap.invalidateSize(),60);
+ }).catch(()=>{box.style.display="none";});}
 
 /* =================================================================
    TAB 4 · COMPARAR CIUDADES
@@ -1004,7 +1042,7 @@ function activateTab(t){
  if(t==="dinamica"&&dMap)setTimeout(()=>{dMap.invalidateSize();if(dLayer&&dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});},80);
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
- if(t==="economia")renderEconomia();
+ if(t==="economia"){renderEconomia();if(ecoMap)setTimeout(()=>{ecoMap.invalidateSize();if(ecoLayer&&ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});},80);}
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
  writeURL();
