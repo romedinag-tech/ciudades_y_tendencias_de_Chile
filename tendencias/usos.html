@@ -70,7 +70,16 @@ footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
       <span class="seg" id="scen"><button data-s="tend" class="on">Tendencial</button><button data-s="alto">Alto</button><button data-s="cons">Consolidación</button></span></div>
   </div>
   <div class="kpis" id="kpis"></div>
-  <div class="grid">
+  <div class="box" style="margin-top:16px;display:none" id="obox">
+    <h3 id="otit">Tendencia observada por zona — 2013→2024</h3>
+    <p>Lo que <b>efectivamente se construyó</b> (sin proyección): cada zona censal según el crecimiento observado del uso elegido entre el primer y el último año del catastro. Haz clic en una zona para ver sus cifras.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
+      <div><label>Uso</label><select id="ouse"></select></div>
+      <div><label>Métrica</label><span class="seg" id="ometric"><button data-m="pct" class="on">% de crecimiento</button><button data-m="abs">m² nuevos</button></span></div>
+    </div>
+    <div id="omap" style="height:480px;border-radius:12px;border:1px solid var(--line)"></div>
+  </div>
+  <div class="grid" style="margin-top:16px">
     <div class="box"><h3 id="t1">Cantidades por uso (m²)</h3><p>m² construidos por uso en 2024, 2030 y 2035 (escenario elegido).</p><div class="cwrap"><canvas id="cQty"></canvas></div></div>
     <div class="box"><h3 id="t2">Variación % por uso (2024→2035)</h3><p>Cuáles usos se incrementan más y cuáles menos.</p><div class="cwrap"><canvas id="cPct"></canvas></div></div>
   </div>
@@ -87,6 +96,16 @@ footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
     </div>
     <p id="zscendesc" style="color:var(--mut);font-size:.82rem;margin:0 0 8px"></p>
     <div id="map" style="height:520px;border-radius:12px;border:1px solid var(--line)"></div></div>
+  <div class="box" style="margin-top:16px;display:none" id="tlbox">
+    <h3 id="tltit">Línea de tiempo — 2013→2035</h3>
+    <p>Mueve la barra para recorrer toda la serie: <b>observado</b> hasta 2024 y <b>proyección</b> desde 2025 (con el escenario elegido en el mapa de arriba). La escala de color queda <b>fija en los quintiles del 2035</b>, así el crecimiento se nota al avanzar.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
+      <div><label>Uso</label><select id="tluse"></select></div>
+      <div style="flex:1;min-width:240px"><label>Año: <b id="tlyr" style="font-size:1.05rem">2024</b> <span id="tlmode" style="color:var(--mut)"></span></label>
+        <input type="range" id="tlrange" min="2013" max="2035" step="1" value="2024" style="width:100%"></div>
+    </div>
+    <div id="tlmap" style="height:480px;border-radius:12px;border:1px solid var(--line)"></div>
+  </div>
 </div>
 <div id="evoPop"><h4 id="evoTit"></h4><div class="ec"><canvas id="evoCanvas"></canvas></div></div>
 <footer>Tendencias por uso (provisional) · <b>deriva reciente robusta</b> a nivel de zona urbana: la tasa anual se estima ponderando por recencia los últimos 7 años y descartando proyectos puntuales atípicos (p.ej. un hospital), de modo que la curva proyectada continúa la dinámica reciente y no extrapola un hecho aislado · Rodrigo Medina González, U. de Concepción. La residencial no se ata aquí a la demanda de viviendas, por lo que puede crecer distinto a la proyección comunal demográficamente acotada.</footer>
@@ -129,13 +148,73 @@ function zval(p){const a=p[zUse];if(!a)return null;const m=zm(p,zYear);
   return zMetric==="lvl"?m:(a[0]>0?100*(m/a[0]-1):null);}
 function drawZoneMap(slug){
  const note=document.getElementById("mapnote"),mapEl=document.getElementById("map"),ctr=document.getElementById("zctrls"),sd=document.getElementById("zscendesc");
- if(!ZMAP.has(slug)){mapEl.style.display="none";ctr.style.display="none";sd.textContent="";note.textContent="El mapa por zona está disponible para las ciudades con suficientes zonas (áreas metropolitanas y comunas grandes). Para esta, usa los gráficos por uso de arriba.";return;}
+ if(!ZMAP.has(slug)){mapEl.style.display="none";ctr.style.display="none";sd.textContent="";note.textContent="El mapa por zona está disponible para las ciudades con suficientes zonas (áreas metropolitanas y comunas grandes). Para esta, usa los gráficos por uso de arriba.";
+   document.getElementById("obox").style.display="none";document.getElementById("tlbox").style.display="none";return;}
  mapEl.style.display="";ctr.style.display="flex";note.textContent="Cada zona censal según el uso, año y escenario elegidos. Haz clic en una zona para ver su trayectoria.";
  if(!zmap){zmap=L.map("map",{preferCanvas:true}).setView([-36.8,-73.05],11);mapChrome(zmap);}
- fetch("data/proyecciones_uso/zonas_"+slug+".geojson").then(r=>r.text()).then(t=>{ZG=JSON.parse(t.replace(/\bNaN\b/g,"null"));
+ fetch("data/proyecciones_uso/zonas_"+slug+".geojson?v=2").then(r=>r.text()).then(t=>{ZG=JSON.parse(t.replace(/\bNaN\b/g,"null"));
    const us=document.getElementById("zuse");us.innerHTML=Object.keys(ZG.usos).map(k=>'<option value="'+k+'">'+ZG.usos[k]+'</option>').join("");us.value=zUse;
-   recolorZones(true);});
+   ["ouse","tluse"].forEach(id=>{const s=document.getElementById(id);s.innerHTML=Object.keys(ZG.usos).map(k=>'<option value="'+k+'">'+ZG.usos[k]+'</option>').join("");});
+   document.getElementById("ouse").value=oUse;document.getElementById("tluse").value=tlUse;
+   recolorZones(true);drawObsMap(true);drawTimeline(true);});
 }
+/* ---- mapa OBSERVADO (serie histórica por zona, sin proyección) ---- */
+let omap=null,olayer=null,olegend=null,oUse="T",oMetric="pct";
+function oserie(p,k){const a=p[k];return a&&a[2]?a[2]:null;}
+function drawObsMap(fit){const box=document.getElementById("obox");
+ if(!ZG||!ZG.anios_hist){box.style.display="none";return;}
+ box.style.display="";
+ const H=ZG.anios_hist,y0=H[0],y1=H[H.length-1];
+ document.getElementById("otit").textContent="Tendencia observada por zona — "+ZG.usos[oUse]+" · "+y0+"→"+y1;
+ if(!omap){omap=L.map("omap",{preferCanvas:true}).setView([-36.8,-73.05],11);mapChrome(omap);}
+ const val=p=>{const s=oserie(p,oUse);if(!s)return null;
+   return oMetric==="pct"?(s[0]>0?100*(s[s.length-1]/s[0]-1):null):(s[s.length-1]-s[0]);};
+ const brk=oMetric==="abs"?qbreaks(ZG.features.map(f=>val(f.properties))):null;
+ if(olayer)omap.removeLayer(olayer);
+ olayer=L.geoJSON(ZG,{style:f=>{const v=val(f.properties);
+   return {weight:.4,color:"#888",fillOpacity:.82,fillColor:oMetric==="pct"?pctColor(v):lvlColor(v,brk)};},
+  onEachFeature:(f,l)=>{const p=f.properties,s=oserie(p,oUse);
+   l.bindPopup("<b>Zona "+p.zona+"</b> · "+(p.comuna||"")+"<br><b>"+ZG.usos[oUse]+"</b> observado:<br>"+
+     y0+": "+fmt(s?s[0]:null)+" m²<br>"+y1+": "+fmt(s?s[s.length-1]:null)+" m²"+
+     (s&&s[0]>0?"<br><b>"+(s[s.length-1]>=s[0]?"+":"")+Math.round(100*(s[s.length-1]/s[0]-1))+"% ("+y0+"→"+y1+")</b>":""));}
+ }).addTo(omap);
+ if(olegend)omap.removeControl(olegend);olegend=L.control({position:"bottomright"});
+ olegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");
+  if(oMetric==="pct")d.innerHTML="<b>"+ZG.usos[oUse]+": % "+y0+"→"+y1+"</b><br><i style='background:#d73027'></i>&lt;0%<br><i style='background:#fee08b'></i>0–10%<br><i style='background:#a6d96a'></i>10–25%<br><i style='background:#66bd63'></i>25–50%<br><i style='background:#1a9850'></i>&gt;50%<br><i style='background:#d8dde3'></i>s/d";
+  else d.innerHTML="<b>m² nuevos "+y0+"→"+y1+"</b><br>"+(brk?("<i style='background:"+RAMP[0]+"'></i>≤ "+fmt(brk[0])+"<br>"+[1,2,3].map(i=>"<i style='background:"+RAMP[i]+"'></i>"+fmt(brk[i-1])+"–"+fmt(brk[i])).join("<br>")+"<br><i style='background:"+RAMP[4]+"'></i>> "+fmt(brk[3])):"s/d")+"<br><i style='background:#d8dde3'></i>s/d";
+  return d;};
+ olegend.addTo(omap);
+ if(fit){try{omap.fitBounds(olayer.getBounds(),{padding:[8,8]});}catch(e){}}
+ setTimeout(()=>omap.invalidateSize(),60);}
+/* ---- línea de tiempo 2013→2035 (observado + proyección, escala fija) ---- */
+let tlmap=null,tllayer=null,tllegend=null,tlUse="T",tlYear=2024,tlBrk=null;
+function tlval(p,y){const a=p[tlUse];if(!a)return null;const H=ZG.anios_hist;
+ if(y<=H[H.length-1]){const s=a[2];if(!s)return null;const i=y-H[0];return i>=0?s[i]:null;}
+ return a[0]+(y-2024)*a[1]*SMULT[zScen];}
+function drawTimeline(fit){const box=document.getElementById("tlbox");
+ if(!ZG||!ZG.anios_hist){box.style.display="none";return;}
+ box.style.display="";
+ if(!tlmap){tlmap=L.map("tlmap",{preferCanvas:true}).setView([-36.8,-73.05],11);mapChrome(tlmap);
+   document.getElementById("tlrange").oninput=e=>{tlYear=+e.target.value;tlUpdate();};}
+ tlBrk=qbreaks(ZG.features.map(f=>tlval(f.properties,2035)));
+ if(tllayer)tlmap.removeLayer(tllayer);
+ tllayer=L.geoJSON(ZG,{style:f=>({weight:.4,color:"#888",fillOpacity:.82,fillColor:lvlColor(tlval(f.properties,tlYear),tlBrk)}),
+  onEachFeature:(f,l)=>{l.on("click",()=>{const p=f.properties;
+    l.bindPopup("<b>Zona "+p.zona+"</b> · "+(p.comuna||"")+"<br>"+ZG.usos[tlUse]+" "+tlYear+": <b>"+fmt(tlval(p,tlYear))+" m²</b>"+(tlYear>ZG.anios_hist[ZG.anios_hist.length-1]?" <i>(proyección)</i>":"")).openPopup();});}
+ }).addTo(tlmap);
+ if(tllegend){tlmap.removeControl(tllegend);tllegend=null;}
+ tllegend=L.control({position:"bottomright"});
+ tllegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");
+  d.innerHTML="<b>"+ZG.usos[tlUse]+" (m²) — escala fija 2035</b><br>"+(tlBrk?("<i style='background:"+RAMP[0]+"'></i>≤ "+fmt(tlBrk[0])+"<br>"+[1,2,3].map(i=>"<i style='background:"+RAMP[i]+"'></i>"+fmt(tlBrk[i-1])+"–"+fmt(tlBrk[i])).join("<br>")+"<br><i style='background:"+RAMP[4]+"'></i>> "+fmt(tlBrk[3])):"s/d")+"<br><i style='background:#d8dde3'></i>s/d";return d;};
+ tllegend.addTo(tlmap);
+ tlUpdate(true);
+ if(fit){try{tlmap.fitBounds(tllayer.getBounds(),{padding:[8,8]});}catch(e){}}}
+function tlUpdate(skipStyle){const H=ZG.anios_hist;
+ document.getElementById("tlyr").textContent=tlYear;
+ document.getElementById("tlmode").textContent=tlYear<=H[H.length-1]?"· observado":"· proyección (esc. "+zScen+")";
+ document.getElementById("tltit").textContent="Línea de tiempo — "+ZG.usos[tlUse]+" · "+H[0]+"→2035";
+ if(!skipStyle&&tllayer)tllayer.eachLayer(l=>{l.setStyle({fillColor:lvlColor(tlval(l.feature.properties,tlYear),tlBrk)});});
+ setTimeout(()=>tlmap.invalidateSize(),60);}
 function recolorZones(fit){if(!ZG)return;const useLbl=ZG.usos[zUse],yrLbl=ZG.anios[zYear];
  document.getElementById("zscendesc").textContent=SDESC[zScen];
  const vals=ZG.features.map(f=>zval(f.properties));const brk=zMetric==="lvl"?qbreaks(vals):null;
@@ -163,9 +242,14 @@ fetch("data/proyecciones_uso_index.json").then(r=>r.text()).then(t=>{IDX=JSON.pa
  // filtros del mapa por zona
  document.getElementById("zuse").onchange=e=>{zUse=e.target.value;recolorZones();};
  document.getElementById("zyear").onchange=e=>{zYear=+e.target.value;recolorZones();};
- document.getElementById("zscen").onchange=e=>{zScen=e.target.value;recolorZones();};
+ document.getElementById("zscen").onchange=e=>{zScen=e.target.value;recolorZones();drawTimeline();};
  document.querySelectorAll("#zmetric button").forEach(b=>b.onclick=()=>{zMetric=b.dataset.m;
    document.querySelectorAll("#zmetric button").forEach(x=>x.classList.toggle("on",x===b));recolorZones();});
+ // controles del mapa observado y la línea de tiempo
+ document.getElementById("ouse").onchange=e=>{oUse=e.target.value;drawObsMap();};
+ document.querySelectorAll("#ometric button").forEach(b=>b.onclick=()=>{oMetric=b.dataset.m;
+   document.querySelectorAll("#ometric button").forEach(x=>x.classList.toggle("on",x===b));drawObsMap();});
+ document.getElementById("tluse").onchange=e=>{tlUse=e.target.value;drawTimeline();};
  var _defSlug=function(){return IDX.ciudades.find(c=>c.slug==="gran_concepcion")?"gran_concepcion":IDX.ciudades[0].slug;};
  if(!document.documentElement.classList.contains("embed")){
    sel.value=_defSlug(); load(sel.value);
