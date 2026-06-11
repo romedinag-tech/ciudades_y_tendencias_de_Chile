@@ -272,7 +272,12 @@ function finishSelect(){
  else ctx='<b>'+s.name+'</b> · '+titleCase(s.region)+(s.metro?' · pertenece a '+s.metro:'');
  document.getElementById("selctx").innerHTML=ctx;
  renderResumen(); renderOferta(); renderDinamica(); updateRegionNavActive();
- if(document.getElementById("p-ranking").classList.contains("on"))drawRanking();
+ // refrescar también la pestaña activa si es una de las que dependen de la selección
+ const t=currentTab();
+ if(t==="ranking")drawRanking();
+ else if(t==="economia")renderEconomia();
+ else if(t==="movilidad")renderMovilidad();
+ else if(t==="mapa")renderNmap();
  syncTendCity();   // tendencias embebidas siguen la ciudad seleccionada
  if(typeof writeURL==="function")writeURL();   // refleja la ciudad en la URL (compartible)
 }
