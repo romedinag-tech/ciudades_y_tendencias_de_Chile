@@ -422,7 +422,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   <!-- ============ ECONOMÍA · AVALÚO / CONTRIBUCIONES ============ -->
   <section class="panel" id="p-economia">
     <h2 id="eco-title">Economía: avalúo fiscal y contribuciones<span class="bar"></span></h2>
-    <p class="lead" id="eco-lead">Evolución semestral del <b>avalúo fiscal</b> (rol de cobro SII) y de las <b>contribuciones</b> de la ciudad seleccionada, 2021–2025, con una <b>proyección</b> de corto plazo.</p>
+    <p class="lead" id="eco-lead">Evolución semestral del <b>avalúo fiscal</b> (rol de cobro SII) y de las <b>contribuciones</b> de la ciudad seleccionada, 2018–2025, con una <b>proyección</b> de corto plazo.</p>
     <div id="eco-kpis"></div>
     <div class="two">
       <div class="chartbox">
@@ -437,16 +437,16 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
       </div>
     </div>
     <div class="chartbox" id="eco-mapbox" style="margin-top:14px">
-      <h3>Mapa: crecimiento del avalúo por zona (2021→2025)</h3>
-      <p>Variación del avalúo fiscal de cada zona censal entre 2021-S2 y 2025-S2. Tonos más intensos indican mayor apreciación. Pasa el cursor sobre una zona para ver su avalúo.</p>
+      <h3>Mapa: crecimiento del avalúo por zona (2018→2025)</h3>
+      <p>Variación del avalúo fiscal de cada zona censal entre el primer y el último semestre de la serie. Tonos más intensos indican mayor apreciación. Pasa el cursor sobre una zona para ver su avalúo.</p>
       <div id="eco-map" class="map"></div>
     </div>
     <div class="chartbox" style="margin-top:14px">
-      <h3 id="eco-c3t">Crecimiento del avalúo 2021→2025 — contexto nacional</h3>
-      <p id="eco-c3s">Variación porcentual del avalúo total entre 2021-S2 y 2025-S2. La barra de la ciudad seleccionada se destaca.</p>
+      <h3 id="eco-c3t">Crecimiento del avalúo 2018→2025 — contexto nacional</h3>
+      <p id="eco-c3s">Variación porcentual del avalúo total entre el primer y el último semestre de la serie. La barra de la ciudad seleccionada se destaca.</p>
       <div class="cwrap" style="height:520px"><canvas id="eco-c3"></canvas></div>
     </div>
-    <div class="note" id="eco-note" style="margin-top:14px"><b>Metodología:</b> serie del catastro SII (rol de cobro) por predio, agregada por comuna y semestre. El avalúo da <b>saltos discretos en cada reavalúo</b> (no agrícola 2022; el próximo es 2026), además del reajuste por IPC y la obra nueva. La proyección extrapola la tendencia reciente y es referencial: el reavalúo 2026 puede desplazar la serie.</div>
+    <div class="note" id="eco-note" style="margin-top:14px"><b>Metodología:</b> serie del catastro SII (rol de cobro) por predio, agregada por comuna y semestre. El avalúo da <b>saltos discretos en cada reavalúo</b> (no agrícola 2018 y 2022; el próximo es 2026), además del reajuste por IPC y la obra nueva. La proyección extrapola la tendencia reciente y es referencial: el reavalúo 2026 puede desplazar la serie.</div>
   </section>
 
   <!-- ============ TENDENCIAS DEMOGRÁFICAS ============ -->
@@ -494,6 +494,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
