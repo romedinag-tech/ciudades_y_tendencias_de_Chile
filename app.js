@@ -328,7 +328,7 @@ const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
 function applyChartTheme(){if(!window.Chart)return;const d=isDark();Chart.defaults.color=d?"#a9c0de":"#5e6e80";Chart.defaults.borderColor=d?"rgba(140,165,200,.14)":"rgba(20,40,70,.07)";}
-function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}}
+function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mapa"){renderNmap();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
 function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
@@ -932,6 +932,52 @@ function cmpMapDraw(){ensureCmpMap();const k=CMP.ky,m=KPI[k],cols=R[m.ramp];
 }
 
 /* =================================================================
+   TAB · MAPA NACIONAL (coroplético independiente con selector)
+   ================================================================= */
+const NMAP={key:"pct_60mas",map:null,layer:null,legend:null,built:false};
+function nmapGo(cut){selectComuna(cut);activateTab("resumen");window.scrollTo({top:0,behavior:"smooth"});}
+function nmapBuildSel(){if(NMAP.built)return;NMAP.built=true;
+ const sel=document.getElementById("n-sel");const groups={};
+ Object.keys(KPI).forEach(k=>{if(!S.kpis.some(r=>num(r[k])!=null))return;
+  (groups[KPI[k].grp]=groups[KPI[k].grp]||[]).push(k);});
+ sel.innerHTML=Object.entries(groups).map(([g,arr])=>'<optgroup label="'+g+'">'+
+  arr.map(k=>'<option value="'+k+'">'+KPI[k].lbl+'</option>').join("")+'</optgroup>').join("");
+ sel.value=NMAP.key;
+ sel.onchange=()=>{NMAP.key=sel.value;nmapDraw();};}
+function ensureNMap(){if(NMAP.map)return;
+ NMAP.map=L.map("n-map",{preferCanvas:true}).setView([-38,-72],5);
+ mapChrome(NMAP.map);}
+function nmapDraw(){ensureNMap();const k=NMAP.key,m=KPI[k],cols=R[m.ramp];
+ const isNse=!!m.nse;
+ const vals=S.kpis.map(r=>num(r[k]));const brk=quant(vals,m.log);
+ const selCuts=new Set(S.sel?S.sel.cuts.map(String):[]);
+ const fillFor=r=>isNse?(r&&r.nse_nivel?NSE_COLORS[r.nse_nivel]:"#d8dde3"):colorFor(r?num(r[k]):null,brk,cols,m.log);
+ if(NMAP.layer)NMAP.map.removeLayer(NMAP.layer);
+ NMAP.layer=L.geoJSON(S.comunasGeo,{
+  style:f=>{const r=S.byCut[f.properties.cut];
+   const on=selCuts.has(String(f.properties.cut));
+   return {color:on?"#1f4e79":"#9aa7b4",weight:on?2.2:.3,fillColor:fillFor(r),fillOpacity:.82};},
+  onEachFeature:(f,l)=>{const cut=String(f.properties.cut);const r=S.byCut[cut];const v=r?num(r[k]):null;
+   const extra=isNse&&r&&r.nse_nivel?'<br><b>'+NSE_LABEL[r.nse_nivel]+'</b> · score '+Math.round(r.nse_score):'';
+   l.bindPopup('<b>'+titleCase(f.properties.comuna)+'</b><br>'+m.lbl+': <b>'+fmtKpi(k,v)+'</b>'+extra+
+     '<br><a href="#" onclick="nmapGo(\''+cut+'\');return false">Ver ficha de la comuna →</a>');
+   l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+   l.on("mouseout",()=>l.setStyle({weight:selCuts.has(cut)?2.2:.3,color:selCuts.has(cut)?"#1f4e79":"#9aa7b4"}));}
+ }).addTo(NMAP.map);
+ if(NMAP.legend)NMAP.map.removeControl(NMAP.legend);
+ NMAP.legend=L.control({position:"bottomright"});
+ NMAP.legend.onAdd=()=>{const d=L.DomUtil.create("div","legend");let h;
+  if(isNse){h='<b>Nivel socioeconómico</b><br>';for(let i=5;i>=1;i--)h+='<i style="background:'+NSE_COLORS[i]+'"></i>'+NSE_LABEL[i]+'<br>';h+='<i style="background:#d8dde3"></i>sin dato';}
+  else{h='<b>'+m.lbl+'</b>'+(m.u?' ('+m.u+')':"")+'<br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],m.dec)+'<br>';
+   for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],m.dec)+' – '+fmt(brk[i],m.dec)+'<br>';
+   h+='<i style="background:'+cols[4]+'"></i>> '+fmt(brk[4],m.dec)+'<br><i style="background:#d8dde3"></i>sin dato';}
+  d.innerHTML=h;return d;};
+ NMAP.legend.addTo(NMAP.map);
+ document.getElementById("n-desc").innerHTML="<b>"+m.lbl+"</b>"+(m.u?" ("+m.u+")":"");
+ setTimeout(()=>NMAP.map.invalidateSize(),60);}
+function renderNmap(){nmapBuildSel();nmapDraw();}
+
+/* =================================================================
    TAB 5 · RANKING NACIONAL
    ================================================================= */
 const RANKDIMS=[
@@ -1055,6 +1101,7 @@ function activateTab(t){
  if(t==="dinamica"&&dMap)setTimeout(()=>{dMap.invalidateSize();if(dLayer&&dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});},80);
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
+ if(t==="mapa")renderNmap();
  if(t==="economia"){renderEconomia();if(ecoMap)setTimeout(()=>{ecoMap.invalidateSize();if(ecoLayer&&ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});},80);}
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");

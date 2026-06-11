@@ -281,6 +281,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   <button data-tab="dinamica" aria-label="Dinámica de crecimiento"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span><span class="tl">Dinámica de crecimiento</span></button>
   <button data-tab="comparar" aria-label="Comparar ciudades"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg></span><span class="tl">Comparar ciudades</span></button>
   <button data-tab="ranking" aria-label="Ranking"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22m7-7.34V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M6 2h12v7a6 6 0 0 1-12 0Z"/></svg></span><span class="tl">Ranking</span></button>
+  <button data-tab="mapa" aria-label="Mapa nacional por comuna"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg></span><span class="tl">Mapa nacional</span></button>
   <button data-tab="economia" aria-label="Economía: avalúo y contribuciones"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="tl">Economía</span></button>
   <button data-tab="tend-demo" aria-label="Tendencias demográficas"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="tl">Tendencias demográficas</span></button>
   <button data-tab="tend-suelo" aria-label="Tendencias de uso de suelo"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><span class="tl">Tendencias de uso de suelo</span></button>
@@ -419,6 +420,18 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
     </div>
   </section>
 
+  <!-- ============ MAPA NACIONAL POR COMUNA ============ -->
+  <section class="panel" id="p-mapa">
+    <h2>Mapa nacional por comuna<span class="bar"></span></h2>
+    <p class="lead">Coroplético sobre las 345 comunas del país: elige el indicador a analizar. Haz clic en una comuna para ver su valor y abrir su ficha. Tu ciudad seleccionada aparece con borde destacado.</p>
+    <div class="panelctrl">
+      <div><label>Indicador</label><select id="n-sel" class="kpisel"></select></div>
+      <div class="desc" id="n-desc"></div>
+    </div>
+    <div id="n-map" class="map" style="height:560px"></div>
+    <div class="note" id="n-note">Los quiebres de la escala son <b>quintiles nacionales</b> del indicador elegido (cada color agrupa ~20% de las comunas). Fuentes: Censo 2024, CASEN 2024 y Catastro SII según el indicador.</div>
+  </section>
+
   <!-- ============ ECONOMÍA · AVALÚO / CONTRIBUCIONES ============ -->
   <section class="panel" id="p-economia">
     <h2 id="eco-title">Economía: avalúo fiscal y contribuciones<span class="bar"></span></h2>
@@ -494,6 +507,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=13"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
