@@ -355,6 +355,11 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
           <div class="cwrap"><canvas id="d-c3b"></canvas></div>
         </div>
       </div>
+      <div class="chartbox" id="d-dmapbox" style="margin-top:14px">
+        <h3>Mapa: ¿dónde densifica y dónde se expande?</h3>
+        <p>Cada zona según el destino de sus m² nuevos (2016–2025): <b style="color:#2166ac">azul = densificación</b> (crece sobre manzanas ya construidas) · <b style="color:#d6604d">naranjo = expansión</b> (manzanas antes vacías). Tonos más intensos indican mayor predominio de un tipo.</p>
+        <div id="d-dmap" class="map"></div>
+      </div>
     </div>
     <div id="d-growth-empty" class="empty" style="display:none"></div>
   </section>
@@ -458,6 +463,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

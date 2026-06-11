@@ -434,7 +434,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=2").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -536,9 +536,10 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=2").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
+ if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
 }
 /* ---- gráficos de crecimiento (lazy crecimiento/<slug>.json) ---- */
 let cg1=null,cg2=null,cg3=null,cg3b=null;
@@ -600,6 +601,49 @@ function drawCrec(D){
     datalabels:{display:true,color:"#fff",font:{size:16,weight:"bold"},formatter:v=>Math.round(100*v/tt)+"%"},
     tooltip:{callbacks:{label:c=>c.label+": "+(c.parsed/1e6).toFixed(1)+"M m² ("+Math.round(100*c.parsed/tt)+"%)"}}}}});
 }
+/* ---- mapa densificación vs expansión por zona (lazy) ---- */
+let dMap=null,dLayer=null,dLegend=null;
+// escala divergente: naranjo = expansión (pct bajo) · azul = densificación (pct alto)
+function colDE(p){if(p==null)return "#d8dde3";
+ if(p<40)return "#d6604d"; if(p<60)return "#f4a582"; if(p<80)return "#d1e5f0";
+ if(p<95)return "#67a9cf"; return "#2166ac";}
+function ensureDMap(){if(dMap)return;
+ dMap=L.map("d-dmap",{preferCanvas:false}).setView([-36.86,-73.03],11);
+ mapChrome(dMap);}
+function drawDmap(feats){ensureDMap();
+ if(dLayer){dMap.removeLayer(dLayer);dLayer=null;}
+ if(dLegend){dMap.removeControl(dLegend);dLegend=null;}
+ dLayer=L.geoJSON({type:"FeatureCollection",features:feats},{
+  style:f=>({color:"#5b6b7b",weight:.5,fillColor:colDE(f.properties.pct_densif_z),fillOpacity:.82}),
+  onEachFeature:(f,l)=>{const p=f.properties;
+   l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+   l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+   const pd=p.pct_densif_z;
+   const tip=pd==null?"sin obra nueva 2016–2025":(pd>=50?Math.round(pd)+"% densificación":Math.round(100-pd)+"% expansión");
+   l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>'+
+     'Densificación: '+fmtN(p.densif_m2)+' m²<br>Expansión: '+fmtN(p.expan_m2)+' m²<br>'+
+     '<b>'+tip+'</b>');}
+ }).addTo(dMap);
+ if(dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});
+ dLegend=L.control({position:"bottomright"});
+ dLegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");
+  d.innerHTML='<b>m² nuevos 2016–2025</b><br>'+
+   '<i style="background:#d6604d"></i>Expansión &gt;60%<br>'+
+   '<i style="background:#f4a582"></i>Expansión 40–60%<br>'+
+   '<i style="background:#d1e5f0"></i>Mixto<br>'+
+   '<i style="background:#67a9cf"></i>Densificación 80–95%<br>'+
+   '<i style="background:#2166ac"></i>Densificación &gt;95%<br>'+
+   '<i style="background:#d8dde3"></i>sin obra nueva';return d;};
+ dLegend.addTo(dMap);
+ setTimeout(()=>dMap.invalidateSize(),60);}
+function loadDmap(slug){const box=document.getElementById("d-dmapbox");
+ const draw=g=>{const fe=g.features?g.features:g;
+   if(fe.some(f=>f.properties.pct_densif_z!=null)){box.style.display="";drawDmap(fe);}
+   else box.style.display="none";};
+ if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
+ if(S.interCache[slug]){draw(S.interCache[slug]);return;}
+ getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+  .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
    TAB 4 · COMPARAR CIUDADES
@@ -887,6 +931,7 @@ function activateTab(t){
  // refrescar mapas al hacerse visibles
  if(t==="oferta"&&zMap)setTimeout(()=>{zMap.invalidateSize();if(zLayer)zMap.fitBounds(zLayer.getBounds(),{padding:[10,10]});},60);
  if(t==="dinamica"&&iMap)setTimeout(()=>{iMap.invalidateSize();if(imLayer)iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});},60);
+ if(t==="dinamica"&&dMap)setTimeout(()=>{dMap.invalidateSize();if(dLayer&&dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});},80);
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
  if(t==="tend-demo")lazyFrame("if-demo");
