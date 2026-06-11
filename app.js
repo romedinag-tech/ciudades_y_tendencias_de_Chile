@@ -668,7 +668,7 @@ function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
  const av=sum("avaluo_mm"),ct=sum("contrib_mm"),np=sum("npred"),pj=ecoProj(av,t);
  return {t,avaluo:av,contrib:ct,npred:np,proj_t:pj.pt,proj:pj.pv,members:recs.map(r=>r.cut)};}
 function renderEconomia(){
- if(!ecoLoaded){getJSON("data/economia/comunas.json?v=4").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
+ if(!ecoLoaded){getJSON("data/economia/comunas.json?v=5").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
    .catch(()=>{document.getElementById("eco-kpis").innerHTML='<div class="note">Serie económica no disponible.</div>';});return;}
  drawEco();}
 function drawEco(){const d=ecoSeries();
@@ -732,7 +732,7 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
  const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
- const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=3").then(d=>{S.ecoZcache[slug]=d;return d;});
+ const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=4").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
     return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
