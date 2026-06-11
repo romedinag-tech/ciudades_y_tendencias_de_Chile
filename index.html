@@ -228,7 +228,7 @@ a{color:var(--navy)}
   .tabs button .ti{margin-right:0}.tabs button .ti svg{width:21px;height:21px}
 }
 </style>
-<link rel="stylesheet" href="theme.css"/>
+<link rel="stylesheet" href="theme.css?v=1"/>
 <script>(function(){try{var t=localStorage.getItem("theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
@@ -442,6 +442,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js"></script>
+<script src="app.js?v=1"></script>
 </body>
 </html>
