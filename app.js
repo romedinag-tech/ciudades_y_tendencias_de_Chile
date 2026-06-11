@@ -61,11 +61,12 @@ const KPI={
  valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true},
  avaluo_total:{lbl:"Avalúo fiscal total",grp:"Avalúo fiscal (Catastro SII)",u:"millones CLP",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
  avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
- pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false}
+ pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false},
+ valor_suelo:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"}
 };
 // indicadores que existen a nivel zona censal (para el módulo Oferta)
 const ZKEYS=["nse_score","dens_hab_ha","pct_depto","per_hog","pct_60mas","pct_inmig","escol","pct_hacin","pct_arriendo",
- "m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_industria","m2pp_deporte"];
+ "m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_industria","m2pp_deporte","valor_suelo"];
 
 /* ---------- estado global ---------- */
 const S={kpis:[],byCut:{},metros:{},comunasGeo:null,natAgg:{},natMed:{},sel:null,
@@ -405,9 +406,9 @@ function zDraw(m){zCur=m;const meta=KPI[m],cols=R[meta.ramp];
  setTimeout(()=>zMap.invalidateSize(),60);
 }
 // barras: comunas del grupo + promedio nacional, para el indicador del mapa
-function zComparison(m){const meta=KPI[m];
- const rows=groupRows().map(r=>[titleCase(r.comuna),num(r[m])]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
- const nat=S.natAgg[m];
+function zComparison(m){const meta=KPI[m];const ck=meta.cmpKey||m;
+ const rows=groupRows().map(r=>[titleCase(r.comuna),num(r[ck])]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
+ const nat=S.natAgg[ck];
  const labels=rows.map(r=>r[0]).concat(["▸ Promedio nacional"]);
  const data=rows.map(r=>Math.round(r[1]*100)/100).concat([nat!=null?Math.round(nat*100)/100:null]);
  const colors=rows.map(()=>R[meta.ramp][3]).concat([OR]);
@@ -433,7 +434,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=2").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -535,7 +536,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=2").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
 }
