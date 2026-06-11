@@ -874,11 +874,15 @@ function cmpCloseModal(){const md=document.getElementById("cmp-modal");if(!md)re
  if(md)md.onclick=e=>{if(e.target===md)cmpCloseModal();};
  document.addEventListener("keydown",e=>{if(e.key==="Escape")cmpCloseModal();});})();
 function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
- const selCuts=new Set(CMP.items.flatMap(it=>it.cuts.map(String)));
- const base=[],selPts=[];
+ // un rombo por ENTIDAD seleccionada (metro = valor agregado), no por cada comuna miembro
+ const selPts=CMP.items.map(it=>{const x=num(cmpVal(it,kx)),y=num(cmpVal(it,ky));
+  return (x==null||y==null)?null:{x,y,name:it.name};}).filter(Boolean);
+ // nube gris: todas las comunas, menos las seleccionadas directamente como comuna
+ const directCuts=new Set(CMP.items.filter(it=>it.kind==="comuna").flatMap(it=>it.cuts.map(String)));
+ const base=[];
  S.kpis.forEach(r=>{const x=num(r[kx]),y=num(r[ky]);if(x==null||y==null)return;
-  const pt={x,y,name:titleCase(r.comuna)};
-  if(selCuts.has(String(r.cut)))selPts.push(pt);else base.push(pt);});
+  if(directCuts.has(String(r.cut)))return;
+  base.push({x,y,name:titleCase(r.comuna)});});
  if(CMP.scatter)CMP.scatter.destroy();
  CMP.scatter=new Chart(document.getElementById("cmp-scatter"),{type:"scatter",
   data:{datasets:[
@@ -892,7 +896,7 @@ function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
     scales:{x:{type:mx.log?"logarithmic":"linear",title:{display:true,text:mx.lbl+(mx.u?" ("+mx.u+")":"")}},
             y:{type:my.log?"logarithmic":"linear",title:{display:true,text:my.lbl+(my.u?" ("+my.u+")":"")}}}}});
  document.getElementById("cmp-sc-title").textContent="Dispersión — "+my.lbl+" vs "+mx.lbl;
- document.getElementById("cmp-sc-sub").innerHTML="Cada punto es una comuna; las <b style='color:"+OR+"'>seleccionadas</b> aparecen como rombo con su nombre.";
+ document.getElementById("cmp-sc-sub").innerHTML="Cada punto gris es una comuna; cada <b style='color:"+OR+"'>ciudad seleccionada</b> aparece como un rombo con su nombre (las áreas metropolitanas, con su valor agregado).";
 }
 function ensureCmpMap(){if(CMP.map)return;
  CMP.map=L.map("cmp-map",{preferCanvas:true}).setView([-38,-72],5);
