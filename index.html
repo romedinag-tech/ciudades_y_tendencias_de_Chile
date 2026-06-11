@@ -283,6 +283,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   <button data-tab="ranking" aria-label="Ranking"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22m7-7.34V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M6 2h12v7a6 6 0 0 1-12 0Z"/></svg></span><span class="tl">Ranking</span></button>
   <button data-tab="mapa" aria-label="Mapa nacional por comuna"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg></span><span class="tl">Mapa nacional</span></button>
   <button data-tab="economia" aria-label="Economía: avalúo y contribuciones"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="tl">Economía</span></button>
+  <button data-tab="movilidad" aria-label="Movilidad: viajes al trabajo"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M15 17.5H8m10.5-2.5-2-6h-5l1 3m-5.5 3 2.5-6h3"/></svg></span><span class="tl">Movilidad</span></button>
   <button data-tab="tend-demo" aria-label="Tendencias demográficas"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="tl">Tendencias demográficas</span></button>
   <button data-tab="tend-suelo" aria-label="Tendencias de uso de suelo"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><span class="tl">Tendencias de uso de suelo</span></button>
 </nav>
@@ -462,6 +463,43 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
     <div class="note" id="eco-note" style="margin-top:14px"><b>Metodología:</b> serie del catastro SII (rol de cobro) por predio, agregada por comuna y semestre. El avalúo da <b>saltos discretos en cada reavalúo</b> (no agrícola 2018 y 2022; el próximo es 2026), además del reajuste por IPC y la obra nueva. La proyección extrapola la tendencia reciente y es referencial: el reavalúo 2026 puede desplazar la serie.</div>
   </section>
 
+  <!-- ============ MOVILIDAD · VIAJES AL TRABAJO ============ -->
+  <section class="panel" id="p-movilidad">
+    <h2 id="mv-title">Movilidad: viajes al trabajo<span class="bar"></span></h2>
+    <p class="lead">Basado en el <b>Censo 2024</b> — preguntas P45 (medio de transporte) y P44 (lugar de trabajo), sobre la población <b>ocupada</b>. Partición modal por comuna y por zona censal, teletrabajo y atracción de viajes.</p>
+    <div id="mv-kpis"></div>
+    <div class="chartbox" style="margin-top:14px">
+      <h3>Partición modal de los viajes al trabajo</h3>
+      <p id="mv-c1s">Cómo se reparte el viaje al trabajo en la selección, comparado con el país.</p>
+      <div class="cwrap" style="height:170px"><canvas id="mv-c1"></canvas></div>
+    </div>
+    <div class="chartbox" id="mv-mapbox" style="margin-top:14px">
+      <h3>Mapa por zona — partición modal</h3>
+      <p>% de los viajes al trabajo de cada zona censal según el modo elegido (agregado censal por zona).</p>
+      <div class="panelctrl">
+        <div><label>Modo</label><select id="mv-sel" class="kpisel">
+          <option value="mv_tpub">Transporte público</option>
+          <option value="mv_auto">Auto</option>
+          <option value="mv_activa">Caminata + bicicleta</option></select></div>
+        <div class="desc" id="mv-desc"></div>
+      </div>
+      <div id="mv-map" class="map"></div>
+    </div>
+    <div class="two" id="mv-metro" style="margin-top:14px">
+      <div class="chartbox">
+        <h3>Atracción de viajes por comuna</h3>
+        <p>Ocupados que viven en <b>otra comuna</b> y trabajan en cada comuna del área metropolitana (matriz origen-destino de la P44).</p>
+        <div class="cwrap" style="height:420px"><canvas id="mv-c2"></canvas></div>
+      </div>
+      <div class="chartbox">
+        <h3>Teletrabajo por comuna</h3>
+        <p>% de ocupados que trabaja desde su vivienda. El microdato censal público llega hasta comuna, por eso este indicador no baja a zona.</p>
+        <div class="cwrap" style="height:420px"><canvas id="mv-c3"></canvas></div>
+      </div>
+    </div>
+    <div class="note" id="mv-note" style="margin-top:14px"><b>Metodología:</b> P45 sobre ocupados que declararon medio de transporte; "movilidad activa" = caminata + bicicleta; "otros" agrupa motocicleta, caballo/lancha/bote y otros. Teletrabajo = trabaja en su propia vivienda (P44). La atracción cuenta a quienes declararon trabajar en una comuna distinta a la de residencia; los sin lugar fijo (~5%) se excluyen. El mapa zonal usa el conteo censal oficial por zona; los % comunales se calculan del microdato.</div>
+  </section>
+
   <!-- ============ TENDENCIAS DEMOGRÁFICAS ============ -->
   <section class="panel" id="p-tend-demo">
     <h2>Tendencias demográficas · 2030 / 2035<span class="bar"></span></h2>
@@ -507,6 +545,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

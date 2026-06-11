@@ -62,7 +62,13 @@ const KPI={
  avaluo_total:{lbl:"Avalúo fiscal total",grp:"Avalúo fiscal (Catastro SII)",u:"millones CLP",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
  avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
  pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false},
- valor_suelo:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"}
+ valor_suelo:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"},
+ pct_tpub:{lbl:"Viajes al trabajo en transporte público",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"PuBu",log:false},
+ pct_auto:{lbl:"Viajes al trabajo en auto",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false},
+ pct_activa:{lbl:"Movilidad activa (caminata + bicicleta)",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"Greens",log:false},
+ pct_teletrabajo:{lbl:"Teletrabajo (trabaja en su vivienda)",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"BuPu",log:false},
+ pct_fuera:{lbl:"Trabaja fuera de su comuna",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false},
+ viajes_atraidos:{lbl:"Atracción de viajes (trabajan aquí, viven en otra comuna)",grp:"Movilidad (Censo 2024)",u:"ocupados",dec:0,agg:"sum",ramp:"Viridis",log:true}
 };
 // indicadores que existen a nivel zona censal (para el módulo Oferta)
 const ZKEYS=["nse_score","dens_hab_ha","pct_depto","per_hog","pct_60mas","pct_inmig","escol","pct_hacin","pct_arriendo",
@@ -140,7 +146,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=2"),
+ getJSON("data/kpis_comunas.json?v=3"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
@@ -315,6 +321,8 @@ function renderResumen(){const s=S.sel;
  if(hasSii)h+='<div class="grp-hd">Uso de suelo — uso efectivo (Catastro SII)</div><div class="kpis">'+sii.map(k=>kpiCard(k)).join("")+'</div>';
  const avaluo=["avaluo_total","avaluo_pp","pct_exento"];
  if(s.rows.some(r=>num(r.avaluo_total)!=null))h+='<div class="grp-hd">Avalúo fiscal (Catastro SII)</div><div class="kpis">'+avaluo.map(k=>kpiCard(k)).join("")+'</div>';
+ const movil=["pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera"];
+ if(s.rows.some(r=>num(r.pct_tpub)!=null))h+='<div class="grp-hd">Movilidad (Censo 2024)</div><div class="kpis">'+movil.map(k=>kpiCard(k)).join("")+'</div>';
  document.getElementById("res-kpis").innerHTML=h;
 }
 
@@ -328,7 +336,7 @@ const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
 function applyChartTheme(){if(!window.Chart)return;const d=isDark();Chart.defaults.color=d?"#a9c0de":"#5e6e80";Chart.defaults.borderColor=d?"rgba(140,165,200,.14)":"rgba(20,40,70,.07)";}
-function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mapa"){renderNmap();}}
+function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mapa"){renderNmap();}else if(t==="movilidad"){renderMovilidad();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
 function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
@@ -434,7 +442,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -536,7 +544,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -642,7 +650,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -731,7 +739,7 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=3").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=4").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
@@ -760,6 +768,89 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
   ecoLegend.addTo(ecoMap);
   box.style.display="";
   setTimeout(()=>ecoMap.invalidateSize(),60);
+ }).catch(()=>{box.style.display="none";});}
+
+/* =================================================================
+   TAB · MOVILIDAD (Censo 2024: P44 lugar de trabajo, P45 modo)
+   ================================================================= */
+let mvC1=null,mvC2=null,mvC3=null,mvMap=null,mvLayer=null,mvLegend=null,mvKey="mv_tpub";
+const MV_LBL={mv_tpub:"Transporte público",mv_auto:"Auto",mv_activa:"Caminata + bicicleta"};
+const MV_RAMP={mv_tpub:"PuBu",mv_auto:"OrRd",mv_activa:"Greens"};
+function renderMovilidad(){const s=S.sel;if(!s)return;
+ document.getElementById("mv-title").firstChild.textContent="Movilidad: viajes al trabajo — "+s.name;
+ const kp=document.getElementById("mv-kpis");
+ if(!s.rows.some(r=>num(r.pct_tpub)!=null)){kp.innerHTML='<div class="note">Sin datos de movilidad para esta selección.</div>';return;}
+ kp.innerHTML='<div class="kpis">'+["pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera"].map(k=>kpiCard(k)).join("")+'</div>';
+ // C1: partición modal apilada (selección vs país)
+ const part=rows=>{const o=aggregate(rows,"pct_tpub"),a=aggregate(rows,"pct_auto"),m=aggregate(rows,"pct_activa");
+   return [o||0,a||0,m||0,Math.max(0,100-(o||0)-(a||0)-(m||0))];};
+ const selP=part(s.rows),natP=part(S.kpis);
+ if(mvC1)mvC1.destroy();
+ mvC1=new Chart(document.getElementById("mv-c1"),{type:"bar",
+  data:{labels:[s.name,"Chile"],datasets:[
+   {label:"Transporte público",data:[selP[0],natP[0]],backgroundColor:"#2b8cbe",stack:"s"},
+   {label:"Auto",data:[selP[1],natP[1]],backgroundColor:"#e34a33",stack:"s"},
+   {label:"Caminata + bici",data:[selP[2],natP[2]],backgroundColor:"#31a354",stack:"s"},
+   {label:"Otros",data:[selP[3],natP[3]],backgroundColor:"#9aa7b4",stack:"s"}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
+    datalabels:{display:true,color:"#fff",font:{size:11,weight:"bold"},formatter:v=>v>=7?Math.round(v)+"%":""},
+    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.x,1)+"%"}}},
+   scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}}}});
+ // mapa zonal de partición modal
+ mvDrawMap(dataSlug());
+ // atracción + teletrabajo por comuna (solo áreas metropolitanas)
+ const isMetro=s.type==="metro"||!!s.metro;
+ const grp=isMetro?groupRows():[];
+ const box=document.getElementById("mv-metro");
+ if(grp.length<2){box.style.display="none";}
+ else{box.style.display="";
+  const at=grp.map(r=>[titleCase(r.comuna),num(r.viajes_atraidos),num(r.pct_fuera)]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
+  if(mvC2)mvC2.destroy();
+  mvC2=new Chart(document.getElementById("mv-c2"),{type:"bar",
+   data:{labels:at.map(r=>r[0]),datasets:[{data:at.map(r=>r[1]),backgroundColor:R.Viridis[2]}]},
+   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+     tooltip:{callbacks:{label:c=>fmtN(c.parsed.x)+" ocupados llegan · "+fmt(at[c.dataIndex][2],1)+"% de sus residentes sale"}}},
+    scales:{x:{title:{display:true,text:"ocupados que llegan desde otras comunas"}}}}});
+  const tl=grp.map(r=>[titleCase(r.comuna),num(r.pct_teletrabajo)]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
+  if(mvC3)mvC3.destroy();
+  mvC3=new Chart(document.getElementById("mv-c3"),{type:"bar",
+   data:{labels:tl.map(r=>r[0]),datasets:[{data:tl.map(r=>r[1]),backgroundColor:R.BuPu[3]}]},
+   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+     tooltip:{callbacks:{label:c=>fmt(c.parsed.x,1)+"% trabaja desde su vivienda"}}},
+    scales:{x:{title:{display:true,text:"% de ocupados en teletrabajo"}}}}});}
+}
+function ensureMvMap(){if(mvMap)return;
+ mvMap=L.map("mv-map",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvMap);}
+function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
+ if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
+ const sel=document.getElementById("mv-sel");sel.value=mvKey;
+ sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ geoP.then(gf=>{
+  if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
+  box.style.display="";ensureMvMap();
+  if(mvLayer){mvMap.removeLayer(mvLayer);mvLayer=null;}
+  if(mvLegend){mvMap.removeControl(mvLegend);mvLegend=null;}
+  const cols=R[MV_RAMP[mvKey]];
+  const vals=gf.map(f=>f.properties[mvKey]);const brk=quant(vals,false);
+  mvLayer=L.geoJSON({type:"FeatureCollection",features:gf},{
+   style:f=>({color:"#5b6b7b",weight:.5,fillColor:colorFor(f.properties[mvKey],brk,cols,false),fillOpacity:.82}),
+   onEachFeature:(f,l)=>{const p=f.properties;
+    l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
+    l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+    l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+
+      '<br>Transporte público: <b>'+fmt(p.mv_tpub,1)+'%</b><br>Auto: <b>'+fmt(p.mv_auto,1)+'%</b>'+
+      '<br>Caminata + bici: <b>'+fmt(p.mv_activa,1)+'%</b>'+(p.mv_n?'<br><span style="color:#888">'+fmtN(p.mv_n)+' ocupados con modo declarado</span>':''));}
+  }).addTo(mvMap);
+  if(mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});
+  mvLegend=L.control({position:"bottomright"});
+  mvLegend.onAdd=()=>{const d=L.DomUtil.create("div","legend");
+   let h='<b>'+MV_LBL[mvKey]+' (%)</b><br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],0)+'%<br>';
+   for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],0)+' – '+fmt(brk[i],0)+'%<br>';
+   h+='<i style="background:'+cols[4]+'"></i>&gt; '+fmt(brk[4],0)+'%<br><i style="background:#d8dde3"></i>s/d';d.innerHTML=h;return d;};
+  mvLegend.addTo(mvMap);
+  document.getElementById("mv-desc").innerHTML="<b>"+MV_LBL[mvKey]+"</b> — % de los viajes al trabajo de la zona";
+  setTimeout(()=>mvMap.invalidateSize(),60);
  }).catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -815,7 +906,8 @@ function cmpRefresh(){
 const CMP_ROWS=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","per_hog","pct_60mas","escol",
  "nse_score","casen_ing_pc","casen_pobreza_pct","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo",
  "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med",
- "avaluo_total","avaluo_pp","pct_exento"];
+ "avaluo_total","avaluo_pp","pct_exento",
+ "pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera","viajes_atraidos"];
 function cmpTable(){const w=document.getElementById("cmp-tablewrap");
  if(!CMP.items.length){w.innerHTML='<div class="loading">Sin ciudades seleccionadas.</div>';return;}
  let h='<table><thead><tr><th>Indicador</th>'+CMP.items.map(it=>'<th>'+it.name+'</th>').join("")+
@@ -1012,6 +1104,12 @@ const RANKDIMS=[
  {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"desc",lbl:"Mayor avalúo fiscal per cápita"},
  {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"asc",lbl:"Menor avalúo fiscal per cápita"},
  {g:"Avalúo fiscal (SII)",k:"pct_exento",src:"k",dir:"desc",lbl:"Mayor % de avalúo exento de contribuciones"},
+ {g:"Movilidad (Censo 2024)",k:"pct_tpub",src:"k",dir:"desc",lbl:"Más uso de transporte público al trabajo"},
+ {g:"Movilidad (Censo 2024)",k:"pct_auto",src:"k",dir:"desc",lbl:"Más uso de auto al trabajo"},
+ {g:"Movilidad (Censo 2024)",k:"pct_activa",src:"k",dir:"desc",lbl:"Más movilidad activa (caminata + bicicleta)"},
+ {g:"Movilidad (Censo 2024)",k:"pct_teletrabajo",src:"k",dir:"desc",lbl:"Más teletrabajo"},
+ {g:"Movilidad (Censo 2024)",k:"pct_fuera",src:"k",dir:"desc",lbl:"Más dependencia laboral de otras comunas (dormitorio)"},
+ {g:"Movilidad (Censo 2024)",k:"viajes_atraidos",src:"k",dir:"desc",lbl:"Mayor atracción de viajes al trabajo"},
  {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"desc",lbl:"Parque construido más nuevo"},
  {g:"Uso de suelo y servicios",k:"anio_mediano",src:"k",dir:"asc",lbl:"Parque construido más antiguo"},
  {g:"Dinámica de crecimiento",k:"crec_m2",src:"g",dir:"desc",lbl:"Mayor crecimiento urbano (m² construidos)"},
@@ -1102,6 +1200,7 @@ function activateTab(t){
  if(t==="comparar"){cmpMapDraw();}
  if(t==="ranking")drawRanking();
  if(t==="mapa")renderNmap();
+ if(t==="movilidad"){renderMovilidad();if(mvMap)setTimeout(()=>{mvMap.invalidateSize();if(mvLayer&&mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});},80);}
  if(t==="economia"){renderEconomia();if(ecoMap)setTimeout(()=>{ecoMap.invalidateSize();if(ecoLayer&&ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});},80);}
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
