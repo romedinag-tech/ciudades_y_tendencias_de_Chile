@@ -53,7 +53,8 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
   h2{font-size:1.1rem}.lead{font-size:.86rem}
 }
 </style>
-<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="theme.css"/>
+<script>(function(){var p=new URLSearchParams(location.search);if(p.has("embed"))document.documentElement.classList.add("embed");try{var t=p.get("theme")||localStorage.getItem("theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
 <div class="warn">El visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</div>
@@ -98,10 +99,19 @@ const NAVY="#1f4e79",OR="#c55a11",USOS=["Habitacional","Comercio","Educacion","S
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
 // marca de autor en mapas y gráficos (viaja en capturas)
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
+// tema claro/oscuro (sincronizado con la plataforma via mensaje o localStorage)
+const CARTO_LIGHT="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const CARTO_DARK="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const TMAPS=[];
+function isDark(){return document.documentElement.classList.contains("dark");}
+function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;TMAPS.forEach(m=>{try{m.setUrl(u);}catch(e){}});}
+function applyTheme(th){const d=th==="dark";document.documentElement.classList.toggle("dark",d);try{localStorage.setItem("theme",d?"dark":"light");}catch(e){}if(window.Chart){Chart.defaults.color=d?"#a9c0de":"#5e6e80";Chart.defaults.borderColor=d?"rgba(140,165,200,.14)":"rgba(0,0,0,.06)";}applyMapTheme();if(typeof CURENV!=="undefined"&&CURENV){try{renderEnv(CURENV);}catch(e){}}}
+if(window.Chart){Chart.defaults.color=isDark()?"#a9c0de":"#5e6e80";}
+window.addEventListener("message",function(e){var d=e.data;if(d&&d.__tendTheme)applyTheme(d.__tendTheme);});
 function mapChrome(map){
- const claro=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; CARTO',maxZoom:19});
+ const claro=L.tileLayer(isDark()?CARTO_DARK:CARTO_LIGHT,{attribution:'&copy; CARTO',maxZoom:19});
  const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar',maxZoom:19});
- claro.addTo(map);L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
+ claro.addTo(map);TMAPS.push(claro);L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
  const fc=L.control({position:"topleft"});fc.onAdd=function(){const d=L.DomUtil.create("div","leaflet-bar fs-ctrl");const a=L.DomUtil.create("a","",d);a.href="#";a.title="Pantalla completa";a.setAttribute("aria-label","Pantalla completa");a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>';
    L.DomEvent.on(a,"click",function(e){L.DomEvent.stop(e);const el=map.getContainer();if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);}else{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);}setTimeout(function(){map.invalidateSize();},250);});return d;};fc.addTo(map);
  authorWM(map);return {claro,sat};
@@ -249,6 +259,7 @@ function drawMap(){const mode=document.getElementById("mapsel").value;
  function postH(){try{parent.postMessage({__tendH:true,h:document.documentElement.scrollHeight+24},"*");}catch(e){}}
  window.__postH=postH;
  window.addEventListener("message",function(e){var d=e.data;if(!d||!d.__tend||!d.demo)return;
+   if(d.theme)applyTheme(d.theme);
    window.__embedCity=d.demo;var sel=document.getElementById("sel");
    if(sel&&[...sel.options].some(function(o){return o.value===d.demo;}))sel.value=d.demo;
    try{load(d.demo);}catch(err){}

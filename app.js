@@ -315,13 +315,26 @@ function renderResumen(){const s=S.sel;
 /* =================================================================
    TAB 2 · OFERTA DE SERVICIOS POR HABITANTE (mapa zonal)
    ================================================================= */
+// ---- tema claro / oscuro ----
+const CARTO_LIGHT="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const CARTO_DARK="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const MAPS=[];
+function isDark(){return document.documentElement.classList.contains("dark");}
+function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
+function applyChartTheme(){if(!window.Chart)return;const d=isDark();Chart.defaults.color=d?"#a9c0de":"#5e6e80";Chart.defaults.borderColor=d?"rgba(140,165,200,.14)":"rgba(20,40,70,.07)";}
+function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}}
+function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
+function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
+const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+function updateThemeIcon(){const b=document.getElementById("themeToggle");if(b)b.innerHTML=isDark()?SUN:MOON;}
 // marca de autor en los mapas (visible y viaja en capturas)
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
-// capas base (Mapa claro / Satélite) + pantalla completa + marca de autor
+// capas base (Mapa claro/oscuro según tema / Satélite) + pantalla completa + marca de autor
 function mapChrome(map){
- const claro=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19});
+ const claro=L.tileLayer(isDark()?CARTO_DARK:CARTO_LIGHT,{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19});
  const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
- claro.addTo(map);
+ claro.addTo(map);MAPS.push({map,carto:claro});
  L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
  const fc=L.control({position:"topleft"});
  fc.onAdd=function(){const d=L.DomUtil.create("div","leaflet-bar fs-ctrl");const a=L.DomUtil.create("a","",d);a.href="#";a.title="Pantalla completa";a.setAttribute("role","button");a.setAttribute("aria-label","Pantalla completa");
@@ -859,7 +872,7 @@ function tendIds(){const s=S.sel;if(!s)return null;const isMetro=s.type==="metro
          usos:isMetro?slugify(s.key):(s.metro?slugify(s.metro):slugify(s.name)), // uso de suelo zonal: si la comuna integra un área, usa el área
          name:s.name};}
 function postToFrame(id){const f=document.getElementById(id);if(!f||!f.src||!f.contentWindow)return;
- const t=tendIds();if(t)f.contentWindow.postMessage({__tend:true,demo:t.demo,usos:t.usos,name:t.name},"*");}
+ const t=tendIds();if(t)f.contentWindow.postMessage({__tend:true,demo:t.demo,usos:t.usos,name:t.name,theme:isDark()?"dark":"light"},"*");}
 function syncTendCity(){postToFrame("if-demo");postToFrame("if-suelo");}
 window.addEventListener("message",e=>{const d=e.data;if(!d||!d.__tendH)return;
  ["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);
@@ -870,3 +883,5 @@ window.addEventListener("message",e=>{const d=e.data;if(!d||!d.__tendH)return;
    try{await navigator.clipboard.writeText(u);}catch(e){try{const t=document.createElement("textarea");t.value=u;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();}catch(_){prompt("Copia el enlace:",u);return;}}
    b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Enlace copiado';
    setTimeout(()=>b.innerHTML=old,1700);};})();
+// toggle de tema claro/oscuro
+(function(){applyChartTheme();updateThemeIcon();const b=document.getElementById("themeToggle");if(b)b.onclick=()=>setTheme(!isDark());})();

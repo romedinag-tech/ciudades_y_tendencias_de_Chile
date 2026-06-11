@@ -167,6 +167,9 @@ a{color:var(--navy)}
 .brand .mark svg{width:17px;height:17px;color:#fff}
 .byline{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#fff;font-size:.78rem;font-weight:600;padding:5px 11px;border-radius:999px;white-space:nowrap}
 .byline b{font-weight:800}
+.brand-right{display:flex;align-items:center;gap:10px}
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);color:#fff;cursor:pointer;transition:background .15s}
+.theme-toggle:hover{background:rgba(255,255,255,.24)}.theme-toggle svg{width:17px;height:17px}
 .sharebtn{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);color:#fff;font:600 .82rem var(--sans);padding:9px 14px;border-radius:10px;cursor:pointer;transition:background .15s;white-space:nowrap;align-self:flex-end}
 .sharebtn:hover{background:rgba(255,255,255,.24)}.sharebtn svg{width:15px;height:15px}
 /* ---- refinamiento de tarjetas + micro-interacción ---- */
@@ -225,12 +228,17 @@ a{color:var(--navy)}
   .tabs button .ti{margin-right:0}.tabs button .ti svg{width:21px;height:21px}
 }
 </style>
+<link rel="stylesheet" href="theme.css"/>
+<script>(function(){try{var t=localStorage.getItem("theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
 <header><div class="wrap">
   <div class="brandrow">
     <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6-4 6 4 6-3v14"/><path d="M9 21V12"/><path d="M15 21V13"/></svg></span> Ciudades y tendencias de Chile</div>
-    <span class="byline">By <b>Rodrigo Medina G.</b></span>
+    <div class="brand-right">
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema claro/oscuro" title="Tema claro / oscuro"></button>
+      <span class="byline">By <b>Rodrigo Medina G.</b></span>
+    </div>
   </div>
   <h1>Uso de Suelo y Población en Chile</h1>
   <p>Plataforma comparada de las comunas y áreas metropolitanas del país: demografía y vivienda (Censo 2017/2024) cruzadas con el uso efectivo del suelo (Catastro SII).</p>
