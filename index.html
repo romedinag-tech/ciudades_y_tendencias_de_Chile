@@ -160,6 +160,20 @@ footer{padding:26px 0;color:var(--mut);font-size:.85rem;text-align:center;border
 .foot-src{margin-top:5px;font-size:.8rem;color:var(--mut-2)}
 a{color:var(--navy)}
 .loading{padding:40px;text-align:center;color:var(--mut)}
+/* ---- comparador: popup (hover) + modal (click) ---- */
+.tablewrap tbody tr[data-k]{cursor:pointer}
+.tablewrap tbody tr[data-k]:hover td:first-child{text-decoration:underline dotted;color:var(--navy)}
+#cmp-pop{position:fixed;z-index:1500;display:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:10px;width:360px;height:230px;pointer-events:none}
+#cmp-pop canvas{width:100%!important;height:100%!important}
+#cmp-modal{position:fixed;inset:0;z-index:2000;display:none;background:rgba(8,18,33,.55);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:20px}
+#cmp-modal.on{display:flex}
+.cmp-modal-box{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-lg);width:min(760px,94vw);padding:20px 20px 14px}
+.cmp-modal-x{position:absolute;top:12px;right:14px;width:30px;height:30px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font-size:.95rem;cursor:pointer;color:var(--mut)}
+.cmp-modal-x:hover{color:var(--ink)}
+.cmp-modal-cv{height:min(62vh,440px)}.cmp-modal-cv canvas{width:100%!important}
+.cmp-modal-foot{margin-top:8px;font-size:.74rem;color:var(--mut-2);text-align:right}
+html.dark #cmp-pop,html.dark .cmp-modal-box{background:#0e2a55;border-color:#16386a}
+html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
 /* ---- marca + autoría ---- */
 .brandrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:.9rem;letter-spacing:.2px;color:#eaf2fb}
@@ -428,6 +442,8 @@ a{color:var(--navy)}
   <div class="foot-src">Fuentes: Censo INE 2017/2024 · Catastro de bienes raíces (SII) · CASEN 2024 · Estimaciones y Proyecciones de Población INE 2002–2035. Elaboración propia.</div>
 </div></footer>
 
+<div id="cmp-pop"><canvas id="cmp-pop-cv"></canvas></div>
+<div id="cmp-modal"><div class="cmp-modal-box"><button class="cmp-modal-x" id="cmp-modal-x" aria-label="Cerrar">✕</button><div class="cmp-modal-cv"><canvas id="cmp-modal-cv"></canvas></div><div class="cmp-modal-foot">Comparación entre las ciudades seleccionadas · By Rodrigo Medina G.</div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>

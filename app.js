@@ -653,7 +653,7 @@ function cmpTable(){const w=document.getElementById("cmp-tablewrap");
  let h='<table><thead><tr><th>Indicador</th>'+CMP.items.map(it=>'<th>'+it.name+'</th>').join("")+
    '<th>Promedio nac.</th><th>Mediana nac.</th></tr></thead><tbody>';
  // fila titular NSE: nivel con badge de color
- h+='<tr><td>Nivel socioeconómico</td>'+CMP.items.map(it=>{const ni=nseInfo(it.rows);
+ h+='<tr data-k="nse_score"><td>Nivel socioeconómico</td>'+CMP.items.map(it=>{const ni=nseInfo(it.rows);
    return '<td>'+(ni?'<span style="background:'+NSE_COLORS[ni.nivel]+';color:#fff;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:700">'+ni.label+'</span>':'s/d')+'</td>';}).join("")+
    '<td style="color:#9aa7b4">—</td><td style="color:#9aa7b4">—</td></tr>';
  CMP_ROWS.forEach(k=>{const m=KPI[k];
@@ -662,13 +662,49 @@ function cmpTable(){const w=document.getElementById("cmp-tablewrap");
   const hi=valid.length?Math.max(...valid):null,lo=valid.length?Math.min(...valid):null;
   // mejor/peor solo en indicadores con polaridad clara (verde=mejor, rojo=peor); el resto sin color
   const best=POS_HI.has(k)?hi:(POS_LO.has(k)?lo:null), worst=POS_HI.has(k)?lo:(POS_LO.has(k)?hi:null);
-  h+='<tr><td>'+m.lbl+(m.u&&m.u!=="%"?" <span style=\"color:#9aa7b4\">("+m.u+")</span>":"")+'</td>';
+  h+='<tr data-k="'+k+'"><td>'+m.lbl+(m.u&&m.u!=="%"?" <span style=\"color:#9aa7b4\">("+m.u+")</span>":"")+'</td>';
   vals.forEach(v=>{let c="";if(CMP.items.length>1&&v!=null){if(best!=null&&v===best)c=" class=best";else if(worst!=null&&v===worst)c=" class=worst";}
    h+='<td'+c+'>'+fmtKpi(k,v)+'</td>';});
   h+='<td style="color:#9aa7b4">'+fmtKpi(k,S.natAgg[k])+'</td>'+
      '<td style="color:#9aa7b4">'+fmtKpi(k,S.natMed[k])+'</td></tr>';});
  h+='</tbody></table>';w.innerHTML=h;
+ // hover -> mini gráfico comparado; click -> gráfico grande en pantalla
+ w.querySelectorAll("tbody tr[data-k]").forEach(tr=>{const k=tr.dataset.k;
+   tr.onmouseenter=ev=>cmpShowPop(k,ev);tr.onmousemove=cmpMovePop;tr.onmouseleave=cmpHidePop;
+   tr.onclick=()=>{cmpHidePop();cmpOpenModal(k);};});
 }
+// ---- gráfico comparado por indicador (hover = popup; click = modal) ----
+function cmpChartConfig(k,big){const m=KPI[k];
+ const labels=CMP.items.map(it=>it.name).concat(["Prom. nac.","Mediana nac."]);
+ const vals=CMP.items.map(it=>cmpVal(it,k)).concat([num(S.natAgg[k]),num(S.natMed[k])]);
+ const cols=CMP.items.map(()=>OR).concat(["#c3cedd","#9aa7b4"]);
+ return {type:"bar",data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderRadius:5}]},
+  options:{maintainAspectRatio:false,indexAxis:"y",__noWM:!big,
+   plugins:{legend:{display:false},
+     title:{display:true,text:m.lbl+(m.u?" ("+m.u+")":""),font:{size:big?15:11,weight:"700"}},
+     tooltip:{callbacks:{label:c=>fmtKpi(k,c.raw)}},
+     datalabels:{display:true,anchor:"end",align:"end",clamp:true,color:"#7d8ea3",
+       font:{size:big?11:9,weight:"600"},formatter:v=>v==null?"s/d":fmtKpi(k,v)}},
+   scales:{x:{type:m.log?"logarithmic":"linear",ticks:{font:{size:big?11:9}}},
+           y:{ticks:{font:{size:big?12:9}}}}}};}
+let cmpPopChart=null,cmpModalChart=null;
+function cmpShowPop(k,ev){if(!KPI[k])return;const pop=document.getElementById("cmp-pop");if(!pop)return;
+ if(cmpPopChart)cmpPopChart.destroy();
+ cmpPopChart=new Chart(document.getElementById("cmp-pop-cv"),cmpChartConfig(k,false));
+ pop.style.display="block";cmpMovePop(ev);}
+function cmpMovePop(ev){const pop=document.getElementById("cmp-pop");if(!pop||pop.style.display==="none")return;
+ const w=pop.offsetWidth||340,hh=pop.offsetHeight||220;let x=ev.clientX+16,y=ev.clientY+16;
+ if(x+w>innerWidth-8)x=ev.clientX-w-16;if(x<8)x=8;if(y+hh>innerHeight-8)y=innerHeight-hh-8;if(y<8)y=8;
+ pop.style.left=x+"px";pop.style.top=y+"px";}
+function cmpHidePop(){const pop=document.getElementById("cmp-pop");if(pop)pop.style.display="none";if(cmpPopChart){cmpPopChart.destroy();cmpPopChart=null;}}
+function cmpOpenModal(k){const md=document.getElementById("cmp-modal");if(!md)return;md.classList.add("on");
+ if(cmpModalChart)cmpModalChart.destroy();
+ cmpModalChart=new Chart(document.getElementById("cmp-modal-cv"),cmpChartConfig(k,true));}
+function cmpCloseModal(){const md=document.getElementById("cmp-modal");if(!md)return;md.classList.remove("on");if(cmpModalChart){cmpModalChart.destroy();cmpModalChart=null;}}
+(function(){const x=document.getElementById("cmp-modal-x"),md=document.getElementById("cmp-modal");
+ if(x)x.onclick=cmpCloseModal;
+ if(md)md.onclick=e=>{if(e.target===md)cmpCloseModal();};
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")cmpCloseModal();});})();
 function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
  const selCuts=new Set(CMP.items.flatMap(it=>it.cuts.map(String)));
  const base=[],selPts=[];
@@ -678,14 +714,17 @@ function cmpScatter(){const kx=CMP.kx,ky=CMP.ky,mx=KPI[kx],my=KPI[ky];
  if(CMP.scatter)CMP.scatter.destroy();
  CMP.scatter=new Chart(document.getElementById("cmp-scatter"),{type:"scatter",
   data:{datasets:[
-   {label:"Comunas",data:base,backgroundColor:"rgba(154,167,180,.5)",pointRadius:3},
-   {label:"Seleccionadas",data:selPts,backgroundColor:OR,pointRadius:6,pointHoverRadius:8}]},
-  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
+   {label:"Comunas",data:base,backgroundColor:"rgba(154,167,180,.45)",pointRadius:3,pointStyle:"circle",datalabels:{display:false}},
+   {label:"Seleccionadas",data:selPts,backgroundColor:OR,borderColor:"#fff",borderWidth:1.5,pointStyle:"rectRot",pointRadius:8,pointHoverRadius:11,
+     datalabels:{display:selPts.length<=14,anchor:"end",align:"top",offset:5,clamp:true,color:OR,
+       font:{size:9,weight:"700",family:"Inter,Segoe UI,sans-serif"},
+       formatter:(v,ctx)=>ctx.dataset.data[ctx.dataIndex].name}}]},
+  options:{maintainAspectRatio:false,layout:{padding:{top:14}},plugins:{legend:{position:"bottom",labels:{usePointStyle:true}},
     tooltip:{callbacks:{label:c=>c.raw.name+": ("+fmt(c.raw.x,mx.dec)+(mx.u?" "+mx.u:"")+", "+fmt(c.raw.y,my.dec)+(my.u?" "+my.u:"")+")"}}},
     scales:{x:{type:mx.log?"logarithmic":"linear",title:{display:true,text:mx.lbl+(mx.u?" ("+mx.u+")":"")}},
             y:{type:my.log?"logarithmic":"linear",title:{display:true,text:my.lbl+(my.u?" ("+my.u+")":"")}}}}});
  document.getElementById("cmp-sc-title").textContent="Dispersión — "+my.lbl+" vs "+mx.lbl;
- document.getElementById("cmp-sc-sub").innerHTML="Cada punto es una comuna; en <b style='color:"+OR+"'>naranja</b> las seleccionadas.";
+ document.getElementById("cmp-sc-sub").innerHTML="Cada punto es una comuna; las <b style='color:"+OR+"'>seleccionadas</b> aparecen como rombo con su nombre.";
 }
 function ensureCmpMap(){if(CMP.map)return;
  CMP.map=L.map("cmp-map",{preferCanvas:true}).setView([-38,-72],5);
