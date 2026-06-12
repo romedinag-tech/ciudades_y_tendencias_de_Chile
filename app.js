@@ -899,45 +899,70 @@ function odBezier(p1,p2,bend){
  const kx=Math.cos(p1[0]*Math.PI/180)||1;
  const X1=p1[1]*kx,Y1=p1[0],X2=p2[1]*kx,Y2=p2[0];
  const mx=(X1+X2)/2,my=(Y1+Y2)/2;let dx=X2-X1,dy=Y2-Y1;const L=Math.hypot(dx,dy)||1;
- const cx=mx-(dy/L)*bend*L,cy=my+(dx/L)*bend*L;   // control = medio + perpendicular·bend
+ const off=Math.min(bend*L,0.12);                 // tope ~13 km: arcos largos no se exageran
+ const cx=mx-(dy/L)*off,cy=my+(dx/L)*off;          // control = medio + perpendicular·offset
  const pts=[],N=22;
  for(let i=0;i<=N;i++){const t=i/N,u=1-t;
   const X=u*u*X1+2*u*t*cx+t*t*X2,Y=u*u*Y1+2*u*t*cy+t*t*Y2;pts.push([Y,X/kx]);}
  return pts;}
 let mvOdN=40;
+function comCentro(cut){if(S.centros&&S.centros[cut])return S.centros[cut];
+ const f=S.comunasGeo.features.find(x=>String(x.properties.cut)===cut);
+ return f?odCentroid(f):null;}
 function renderOD(){const s=S.sel;
  const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
  const loadOd=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
  const loadC=S.centros?Promise.resolve(S.centros):getJSON("data/movilidad/centros.json").then(d=>{S.centros=d;return d;}).catch(()=>({}));
  Promise.all([loadOd,loadC]).then(([d])=>{
-  if(s.type==="metro"){bars.style.display="none";box.style.display="";odWireN();odFlowMap(d);}
-  else{box.style.display="none";bars.style.display="";odBars(d,String(s.key));}
+  box.style.display="";odWireN();odFlowMap(d);          // mapa de flujos: metros y comunas
+  if(s.type==="metro"){bars.style.display="none";}
+  else{bars.style.display="";odBars(d,String(s.key));}  // comuna: además, barras de destinos/orígenes
  }).catch(()=>{box.style.display="none";bars.style.display="none";});}
 let mvOdNWired=false;
 function odWireN(){const sel=document.getElementById("mv-odn");if(!sel)return;
  sel.value=String(mvOdN);
  if(mvOdNWired)return;mvOdNWired=true;
  sel.onchange=()=>{mvOdN=+sel.value;if(S.od)odFlowMap(S.od);};}
-function odFlowMap(d){const s=S.sel;
- const cuts=new Set(s.cuts.map(String));
- // centro urbano (poblacional) de cada comuna; fallback al centroide geométrico
- const cen={};S.comunasGeo.features.forEach(f=>{const c=String(f.properties.cut);
-  if(cuts.has(c)){const cc=(S.centros&&S.centros[c])||odCentroid(f);if(cc)cen[c]=cc;}});
- // pares dentro del metro, fusionando ambos sentidos en una línea
- const pair={};
- d.pares.forEach(([o,dd,n])=>{if(!cuts.has(o)||!cuts.has(dd))return;
-  const key=o<dd?o+"|"+dd:dd+"|"+o;
-  const e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
-  if(o===e.a)e.ab+=n;else e.ba+=n;});
- const allFlows=Object.values(pair).filter(e=>cen[e.a]&&cen[e.b]).sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
+function odFlowMap(d){const s=S.sel;const isMetro=s.type==="metro";
+ const cen={},drawCuts=new Set();
+ let allFlows;
+ if(isMetro){
+  const cuts=new Set(s.cuts.map(String));
+  cuts.forEach(c=>{const cc=comCentro(c);if(cc){cen[c]=cc;drawCuts.add(c);}});
+  const pair={};
+  d.pares.forEach(([o,dd,n])=>{if(!cuts.has(o)||!cuts.has(dd))return;
+   const key=o<dd?o+"|"+dd:dd+"|"+o;
+   const e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
+   if(o===e.a)e.ab+=n;else e.ba+=n;});
+  allFlows=Object.values(pair).filter(e=>cen[e.a]&&cen[e.b]);
+  document.getElementById("mv-od-title").textContent="Matriz origen-destino — flujos al trabajo entre comunas";
+  document.getElementById("mv-od-desc").innerHTML='Cada línea une dos comunas del área metropolitana: el <b>grosor</b> indica cuántos ocupados viajan entre ellas y la <b style="color:#1f4e79">flecha</b> marca el <b>sentido dominante</b>. Los nodos están en el <b>centro urbano poblacional</b> de cada comuna. Haz clic en una línea para el detalle.';
+ } else {
+  // red ego de una comuna: a dónde van sus residentes y de dónde llegan sus trabajadores
+  const cut=String(s.key);const me=comCentro(cut);if(me){cen[cut]=me;drawCuts.add(cut);}
+  const pp={};
+  d.pares.forEach(([o,dd,n])=>{
+   if(o===cut){const e=pp[dd]=pp[dd]||{a:cut,b:dd,ab:0,ba:0};e.ab+=n;}        // residentes salen
+   else if(dd===cut){const e=pp[o]=pp[o]||{a:cut,b:o,ab:0,ba:0};e.ba+=n;}});  // trabajadores llegan
+  Object.values(pp).forEach(e=>{const cc=comCentro(e.b);if(cc){cen[e.b]=cc;drawCuts.add(e.b);}});
+  allFlows=Object.values(pp).filter(e=>cen[e.a]&&cen[e.b]);
+  document.getElementById("mv-od-title").textContent="Red de viajes al trabajo de "+s.name;
+  document.getElementById("mv-od-desc").innerHTML='Cada arco une <b>'+s.name+'</b> con una comuna con la que intercambia trabajadores: <b>azul saliente</b> = sus residentes van a trabajar allá; <b>azul entrante</b> = de allá llegan a trabajar acá. El <b>grosor</b> es el total y la <b style="color:#1f4e79">flecha</b> el sentido dominante.';
+ }
+ allFlows.sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
  const flows=mvOdN>=999?allFlows:allFlows.slice(0,mvOdN);
- document.getElementById("mv-odn-info").textContent="Mostrando "+flows.length+" de "+allFlows.length+" pares con ≥100 viajes.";
+ document.getElementById("mv-odn-info").textContent="Mostrando "+flows.length+" de "+allFlows.length+(isMetro?" pares":" comunas conectadas")+".";
+ // mantener en cen/drawCuts solo lo que se dibuja (para encuadrar bien en comunas con muchas conexiones)
+ if(!isMetro){const keep=new Set([String(s.key)]);flows.forEach(e=>{keep.add(e.a);keep.add(e.b);});
+  Object.keys(cen).forEach(c=>{if(!keep.has(c))delete cen[c];});drawCuts.clear();keep.forEach(c=>drawCuts.add(c));}
  if(!mvOdMap){mvOdMap=L.map("mv-odmap",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvOdMap);}
  if(mvOdLayer){mvOdMap.removeLayer(mvOdLayer);mvOdLayer=null;}
  const items=[];
- // polígonos de contexto
- S.comunasGeo.features.forEach(f=>{if(!cuts.has(String(f.properties.cut)))return;
-  items.push(L.geoJSON(f,{style:{color:"#9aa7b4",weight:1,fillColor:"#9aa7b4",fillOpacity:.08,interactive:false}}));});
+ // polígonos de contexto (la comuna seleccionada resaltada en la vista ego)
+ const selCut=String(s.key);
+ S.comunasGeo.features.forEach(f=>{const c=String(f.properties.cut);if(!drawCuts.has(c))return;
+  const isMe=!isMetro&&c===selCut;
+  items.push(L.geoJSON(f,{style:{color:isMe?OR:"#9aa7b4",weight:isMe?2:1,fillColor:isMe?OR:"#9aa7b4",fillOpacity:isMe?.12:.08,interactive:false}}));});
  const maxF=flows.length?flows[0].ab+flows[0].ba:1;
  flows.forEach(e=>{const tot=e.ab+e.ba;
   const w=Math.max(1.4,11*Math.sqrt(tot/maxF));
