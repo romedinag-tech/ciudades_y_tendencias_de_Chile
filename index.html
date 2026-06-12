@@ -513,6 +513,11 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
       </div>
       <div id="mv-odmap" class="map"></div>
     </div>
+    <div class="chartbox" id="mv-attpctbox" style="margin-top:14px;display:none">
+      <h3 id="mv-attpct-t">Polos de empleo — top 10 por tasa de atracción</h3>
+      <p>Comunas del área metropolitana ordenadas por <b>tasa de atracción</b>: de cada 100 personas que trabajan en la comuna, cuántas llegan desde <b>otra</b> comuna. Revela dónde se concentra el empleo metropolitano.</p>
+      <div class="cwrap" style="height:380px"><canvas id="mv-c6"></canvas></div>
+    </div>
     <div class="two" id="mv-odbars" style="margin-top:14px;display:none">
       <div class="chartbox">
         <h3 id="mv-od1t">Dónde trabajan los residentes</h3>
@@ -573,6 +578,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

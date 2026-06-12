@@ -783,7 +783,7 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
 /* =================================================================
    TAB · MOVILIDAD (Censo 2024: P44 lugar de trabajo, P45 modo)
    ================================================================= */
-let mvC1=null,mvC2=null,mvC3=null,mvMap=null,mvLayer=null,mvLegend=null,mvKey="mv_tpub";
+let mvC1=null,mvC2=null,mvC3=null,mvC6=null,mvMap=null,mvLayer=null,mvLegend=null,mvKey="mv_tpub";
 const MV_LBL={mv_tpub:"Transporte público",mv_auto:"Auto",mv_camina:"A pie",mv_bici:"Bicicleta"};
 const MV_RAMP={mv_tpub:"PuBu",mv_auto:"OrRd",mv_camina:"Greens",mv_bici:"Viridis"};
 let mvSex="t",mvWired=false;
@@ -847,7 +847,7 @@ function mvDraw(){const s=S.sel;const kp=document.getElementById("mv-kpis");
  const isMetro=s.type==="metro"||!!s.metro;
  const grp=isMetro?groupRows():[];
  const box=document.getElementById("mv-metro");
- if(grp.length<2){box.style.display="none";return;}
+ if(grp.length<2){box.style.display="none";document.getElementById("mv-attpctbox").style.display="none";return;}
  box.style.display="";const D=S.mvSexo.comunas;
  const at=grp.map(r=>{const x=(D[String(r.cut)]||{})[mvSex];return x?[titleCase(r.comuna),x.atr,x.b44?100*x.fu/x.b44:null]:null;})
    .filter(Boolean).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
@@ -865,6 +865,18 @@ function mvDraw(){const s=S.sel;const kp=document.getElementById("mv-kpis");
   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
     tooltip:{callbacks:{label:c=>fmt(c.parsed.x,1)+"% trabaja desde su vivienda ("+SEXLBL[mvSex].toLowerCase()+")"}}},
    scales:{x:{title:{display:true,text:"% en teletrabajo — "+SEXLBL[mvSex]}}}}});
+ // top 10 por TASA DE ATRACCIÓN: % de quienes trabajan en la comuna que llega de otra comuna
+ const ap=grp.map(r=>{const x=(D[String(r.cut)]||{})[mvSex];if(!x)return null;const t=x.atr+x.loc;
+   return t>0?[titleCase(r.comuna),100*x.atr/t,x.atr,t]:null;}).filter(Boolean).sort((a,b)=>b[1]-a[1]).slice(0,10);
+ document.getElementById("mv-attpctbox").style.display=ap.length?"":"none";
+ document.getElementById("mv-attpct-t").textContent="Polos de empleo — top 10 por tasa de atracción"+(mvSex!=="t"?" ("+SEXLBL[mvSex]+")":"");
+ if(mvC6)mvC6.destroy();
+ mvC6=new Chart(document.getElementById("mv-c6"),{type:"bar",
+  data:{labels:ap.map(r=>r[0]),datasets:[{data:ap.map(r=>r[1]),backgroundColor:R.Viridis[3]}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},
+    datalabels:{display:true,anchor:"end",align:"end",color:GREY,font:{size:10,weight:"bold"},formatter:v=>Math.round(v)+"%"},
+    tooltip:{callbacks:{label:c=>{const r=ap[c.dataIndex];return fmt(r[1],1)+"% de atracción · "+fmtN(r[2])+" llegan de "+fmtN(r[3])+" que trabajan ahí";}}}},
+   scales:{x:{max:100,title:{display:true,text:"% de quienes trabajan ahí que llega de otra comuna — "+SEXLBL[mvSex]},ticks:{callback:v=>v+"%"}}}}});
 }
 /* ---- matriz O-D: mapa de flujos (metros) / barras de orígenes-destinos (comunas) ---- */
 let mvOdMap=null,mvOdLayer=null,mvC4=null,mvC5=null;
