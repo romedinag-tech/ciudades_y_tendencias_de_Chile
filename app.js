@@ -786,54 +786,85 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
 let mvC1=null,mvC2=null,mvC3=null,mvMap=null,mvLayer=null,mvLegend=null,mvKey="mv_tpub";
 const MV_LBL={mv_tpub:"Transporte público",mv_auto:"Auto",mv_camina:"A pie",mv_bici:"Bicicleta"};
 const MV_RAMP={mv_tpub:"PuBu",mv_auto:"OrRd",mv_camina:"Greens",mv_bici:"Viridis"};
+let mvSex="t",mvWired=false;
+const SEXLBL={t:"Total",h:"Hombres",m:"Mujeres"};
+// suma de conteos de movilidad por sexo ('t'/'h'/'m') sobre un conjunto de comunas
+function mvSumSex(rows,sex){const D=S.mvSexo;if(!D)return null;
+ const a={om:0,tp:0,au:0,ca:0,bi:0,ot:0,b44:0,tl:0,fu:0,atr:0};let any=false;
+ rows.forEach(r=>{const b=D.comunas[String(r.cut)];if(b&&b[sex]){const x=b[sex];for(const k in a)a[k]+=x[k]||0;any=true;}});
+ return any?a:null;}
+function mvPct(a){return a?{tpub:a.om?100*a.tp/a.om:null,auto:a.om?100*a.au/a.om:null,
+  camina:a.om?100*a.ca/a.om:null,bici:a.om?100*a.bi/a.om:null,
+  telet:a.b44?100*a.tl/a.b44:null,fuera:a.b44?100*a.fu/a.b44:null}:null;}
+function mvCard(lbl,pct,natPct,cnt){
+ const cl=cnt!=null?'<div class="s" style="color:'+GREY+'">'+fmt(cnt,0)+' viajes</div>':'';
+ let sub="";if(pct!=null&&natPct!=null){const ab=(pct-natPct)>=0;
+   sub='<div class="s" style="color:'+GREY+'">'+(ab?"▲":"▼")+' '+fmt(Math.abs(pct-natPct),1)+'% vs Chile</div>';}
+ return '<div class="kpi"><div class="v">'+(pct!=null?fmt(pct,1)+"%":"s/d")+'</div><div class="l">'+lbl+'</div>'+cl+sub+'</div>';}
+function mvWireSex(){if(mvWired)return;mvWired=true;
+ document.querySelectorAll("#mv-sex button").forEach(b=>b.onclick=()=>{mvSex=b.dataset.s;
+   document.querySelectorAll("#mv-sex button").forEach(x=>x.classList.toggle("on",x===b));mvDraw();});}
 function renderMovilidad(){const s=S.sel;if(!s)return;
  document.getElementById("mv-title").firstChild.textContent="Movilidad: viajes al trabajo — "+s.name;
- const kp=document.getElementById("mv-kpis");
- if(!s.rows.some(r=>num(r.pct_tpub)!=null)){kp.innerHTML='<div class="note">Sin datos de movilidad para esta selección.</div>';return;}
- kp.innerHTML='<div class="kpis">'+["ocup_modal","pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera"].map(k=>kpiCard(k)).join("")+'</div>';
- // C1: partición modal apilada con cantidades (selección vs país), 5 modos
- const cnts=rows=>{const g=k=>aggregate(rows,k)||0;
-   const tp=g("viajes_tpub"),au=g("viajes_auto"),ca=g("viajes_camina"),bi=g("viajes_bici"),ot=g("viajes_otros");
-   const tot=tp+au+ca+bi+ot||1;return {n:[tp,au,ca,bi,ot],tot};};
- const sc=cnts(s.rows),nc=cnts(S.kpis);
- const pct=(c,i)=>Math.round(1000*c.n[i]/c.tot)/10;
- const cntFor=(isSel,i)=>(isSel?sc:nc).n[i];
+ if(!S.mvSexo){getJSON("data/movilidad/sexo.json").then(d=>{S.mvSexo=d;
+   S.mvSexNat={t:mvSumSex(S.kpis,"t"),h:mvSumSex(S.kpis,"h"),m:mvSumSex(S.kpis,"m")};
+   mvWireSex();mvDraw();}).catch(()=>{document.getElementById("mv-kpis").innerHTML='<div class="note">Datos de movilidad no disponibles.</div>';});return;}
+ mvDraw();}
+function mvDraw(){const s=S.sel;const kp=document.getElementById("mv-kpis");
+ const agg=mvSumSex(s.rows,mvSex);
+ if(!agg||!agg.om){kp.innerHTML='<div class="note">Sin datos de movilidad para esta selección.</div>';return;}
+ const p=mvPct(agg),np=mvPct(S.mvSexNat[mvSex])||{};
+ document.getElementById("mv-sexdesc").innerHTML=mvSex==="t"?"Resultados del total de ocupados.":
+   "Mostrando <b>"+SEXLBL[mvSex].toLowerCase()+"</b>. El mapa por zona y la matriz O-D usan el total (el agregado censal por zona no se desagrega por sexo).";
+ kp.innerHTML='<div class="kpis">'+[
+   '<div class="kpi"><div class="v">'+fmt(agg.om,0)+'</div><div class="l">Viajes al trabajo (total de ocupados)</div></div>',
+   mvCard("Transporte público",p.tpub,np.tpub,agg.tp),
+   mvCard("Auto",p.auto,np.auto,agg.au),
+   mvCard("A pie",p.camina,np.camina,agg.ca),
+   mvCard("Bicicleta",p.bici,np.bici,agg.bi),
+   mvCard("Teletrabajo (trabaja en su vivienda)",p.telet,np.telet,agg.tl),
+   mvCard("Trabaja fuera de su comuna",p.fuera,np.fuera,agg.fu)].join("")+'</div>';
+ // C1: partición modal — siempre Total / Hombres / Mujeres juntas
+ const aT=mvSumSex(s.rows,"t"),aH=mvSumSex(s.rows,"h"),aM=mvSumSex(s.rows,"m"),AG=[aT,aH,aM];
+ const arr=a=>[a.tp,a.au,a.ca,a.bi,a.ot],tot=a=>arr(a).reduce((x,y)=>x+y,0)||1;
+ const pc=(a,i)=>Math.round(1000*arr(a)[i]/tot(a))/10;
  if(mvC1)mvC1.destroy();
  mvC1=new Chart(document.getElementById("mv-c1"),{type:"bar",
-  data:{labels:[s.name,"Chile"],datasets:[
-   {label:"Transporte público",data:[pct(sc,0),pct(nc,0)],backgroundColor:"#2b8cbe",stack:"s"},
-   {label:"Auto",data:[pct(sc,1),pct(nc,1)],backgroundColor:"#e34a33",stack:"s"},
-   {label:"A pie",data:[pct(sc,2),pct(nc,2)],backgroundColor:"#31a354",stack:"s"},
-   {label:"Bicicleta",data:[pct(sc,3),pct(nc,3)],backgroundColor:"#5ec962",stack:"s"},
-   {label:"Otros",data:[pct(sc,4),pct(nc,4)],backgroundColor:"#9aa7b4",stack:"s"}]},
+  data:{labels:["Total","Hombres","Mujeres"],datasets:[
+   {label:"Transporte público",data:AG.map(a=>pc(a,0)),backgroundColor:"#2b8cbe",stack:"s"},
+   {label:"Auto",data:AG.map(a=>pc(a,1)),backgroundColor:"#e34a33",stack:"s"},
+   {label:"A pie",data:AG.map(a=>pc(a,2)),backgroundColor:"#31a354",stack:"s"},
+   {label:"Bicicleta",data:AG.map(a=>pc(a,3)),backgroundColor:"#5ec962",stack:"s"},
+   {label:"Otros",data:AG.map(a=>pc(a,4)),backgroundColor:"#9aa7b4",stack:"s"}]},
   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
     datalabels:{display:true,color:"#fff",font:{size:11,weight:"bold"},formatter:v=>v>=6?Math.round(v)+"%":""},
-    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.x,1)+"% ("+fmt(cntFor(c.dataIndex===0,c.datasetIndex),0)+" viajes)"}}},
+    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.x,1)+"% ("+fmt(arr(AG[c.dataIndex])[c.datasetIndex],0)+" viajes)"}}},
    scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}}}});
- document.getElementById("mv-c1s").innerHTML="Cómo se reparte el viaje al trabajo en la selección, comparado con el país. En total, <b>"+fmt(sc.tot,0)+" viajes</b> al trabajo en "+s.name+".";
- // mapa zonal de partición modal
- mvDrawMap(dataSlug());
- // atracción + teletrabajo por comuna (solo áreas metropolitanas)
+ document.getElementById("mv-c1s").innerHTML="Partición modal comparando <b>hombres</b> y <b>mujeres</b> con el total. "+SEXLBL[mvSex]+": <b>"+fmt(agg.om,0)+" viajes</b> al trabajo en "+s.name+".";
+ // mapa zonal (total) y O-D (total)
+ mvDrawMap(dataSlug());renderOD();
+ // atracción + teletrabajo por comuna, según sexo (solo áreas metropolitanas)
  const isMetro=s.type==="metro"||!!s.metro;
  const grp=isMetro?groupRows():[];
  const box=document.getElementById("mv-metro");
- if(grp.length<2){box.style.display="none";}
- else{box.style.display="";
-  const at=grp.map(r=>[titleCase(r.comuna),num(r.viajes_atraidos),num(r.pct_fuera)]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
-  if(mvC2)mvC2.destroy();
-  mvC2=new Chart(document.getElementById("mv-c2"),{type:"bar",
-   data:{labels:at.map(r=>r[0]),datasets:[{data:at.map(r=>r[1]),backgroundColor:R.Viridis[2]}]},
-   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
-     tooltip:{callbacks:{label:c=>fmtN(c.parsed.x)+" ocupados llegan · "+fmt(at[c.dataIndex][2],1)+"% de sus residentes sale"}}},
-    scales:{x:{title:{display:true,text:"ocupados que llegan desde otras comunas"}}}}});
-  const tl=grp.map(r=>[titleCase(r.comuna),num(r.pct_teletrabajo)]).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
-  if(mvC3)mvC3.destroy();
-  mvC3=new Chart(document.getElementById("mv-c3"),{type:"bar",
-   data:{labels:tl.map(r=>r[0]),datasets:[{data:tl.map(r=>r[1]),backgroundColor:R.BuPu[3]}]},
-   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
-     tooltip:{callbacks:{label:c=>fmt(c.parsed.x,1)+"% trabaja desde su vivienda"}}},
-    scales:{x:{title:{display:true,text:"% de ocupados en teletrabajo"}}}}});}
- renderOD();
+ if(grp.length<2){box.style.display="none";return;}
+ box.style.display="";const D=S.mvSexo.comunas;
+ const at=grp.map(r=>{const x=(D[String(r.cut)]||{})[mvSex];return x?[titleCase(r.comuna),x.atr,x.b44?100*x.fu/x.b44:null]:null;})
+   .filter(Boolean).filter(r=>r[1]!=null).sort((a,b)=>b[1]-a[1]);
+ if(mvC2)mvC2.destroy();
+ mvC2=new Chart(document.getElementById("mv-c2"),{type:"bar",
+  data:{labels:at.map(r=>r[0]),datasets:[{data:at.map(r=>r[1]),backgroundColor:R.Viridis[2]}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+    tooltip:{callbacks:{label:c=>fmtN(c.parsed.x)+" llegan ("+SEXLBL[mvSex].toLowerCase()+") · "+fmt(at[c.dataIndex][2],1)+"% de sus residentes sale"}}},
+   scales:{x:{title:{display:true,text:"ocupados que llegan desde otras comunas — "+SEXLBL[mvSex]}}}}});
+ const tl=grp.map(r=>{const x=(D[String(r.cut)]||{})[mvSex];return x&&x.b44?[titleCase(r.comuna),100*x.tl/x.b44]:null;})
+   .filter(Boolean).sort((a,b)=>b[1]-a[1]);
+ if(mvC3)mvC3.destroy();
+ mvC3=new Chart(document.getElementById("mv-c3"),{type:"bar",
+  data:{labels:tl.map(r=>r[0]),datasets:[{data:tl.map(r=>r[1]),backgroundColor:R.BuPu[3]}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+    tooltip:{callbacks:{label:c=>fmt(c.parsed.x,1)+"% trabaja desde su vivienda ("+SEXLBL[mvSex].toLowerCase()+")"}}},
+   scales:{x:{title:{display:true,text:"% en teletrabajo — "+SEXLBL[mvSex]}}}}});
 }
 /* ---- matriz O-D: mapa de flujos (metros) / barras de orígenes-destinos (comunas) ---- */
 let mvOdMap=null,mvOdLayer=null,mvC4=null,mvC5=null;

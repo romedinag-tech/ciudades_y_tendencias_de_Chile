@@ -467,6 +467,9 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   <section class="panel" id="p-movilidad">
     <h2 id="mv-title">Movilidad: viajes al trabajo<span class="bar"></span></h2>
     <p class="lead">Basado en el <b>Censo 2024</b> — preguntas P45 (medio de transporte) y P44 (lugar de trabajo), sobre la población <b>ocupada</b>. Partición modal por comuna y por zona censal, teletrabajo y atracción de viajes.</p>
+    <div class="panelctrl"><div><label>Población</label>
+      <span class="ctrl" id="mv-sex"><button data-s="t" class="on">Total</button><button data-s="h">Hombres</button><button data-s="m">Mujeres</button></span></div>
+      <div class="desc" id="mv-sexdesc"></div></div>
     <div id="mv-kpis"></div>
     <div class="chartbox" style="margin-top:14px">
       <h3>Partición modal de los viajes al trabajo</h3>
@@ -563,6 +566,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
