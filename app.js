@@ -63,11 +63,13 @@ const KPI={
  avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
  pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false},
  valor_suelo:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"},
- pct_tpub:{lbl:"Viajes al trabajo en transporte público",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"PuBu",log:false},
- pct_auto:{lbl:"Viajes al trabajo en auto",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false},
- pct_activa:{lbl:"Movilidad activa (caminata + bicicleta)",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"Greens",log:false},
+ pct_tpub:{lbl:"Viajes al trabajo en transporte público",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"PuBu",log:false,cntKey:"viajes_tpub"},
+ pct_auto:{lbl:"Viajes al trabajo en auto",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false,cntKey:"viajes_auto"},
+ pct_camina:{lbl:"Viajes al trabajo a pie",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"Greens",log:false,cntKey:"viajes_camina"},
+ pct_bici:{lbl:"Viajes al trabajo en bicicleta",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"Viridis",log:false,cntKey:"viajes_bici"},
  pct_teletrabajo:{lbl:"Teletrabajo (trabaja en su vivienda)",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"BuPu",log:false},
  pct_fuera:{lbl:"Trabaja fuera de su comuna",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false},
+ ocup_modal:{lbl:"Viajes al trabajo (total de ocupados)",grp:"Movilidad (Censo 2024)",u:"viajes",dec:0,agg:"sum",ramp:"Viridis",log:true},
  viajes_atraidos:{lbl:"Atracción de viajes (trabajan aquí, viven en otra comuna)",grp:"Movilidad (Censo 2024)",u:"ocupados",dec:0,agg:"sum",ramp:"Viridis",log:true}
 };
 // indicadores que existen a nivel zona censal (para el módulo Oferta)
@@ -103,6 +105,7 @@ function slugify(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"
 
 /* ---------- agregación de un conjunto de comunas ---------- */
 function aggregate(rows,k){const m=KPI[k];
+ if(!m){let s=0,any=false;rows.forEach(r=>{if(num(r[k])!=null){s+=r[k];any=true;}});return any?s:null;} // clave fuera del catálogo (p.ej. conteos): suma
  if(m.agg==="sum"){let s=0,any=false;rows.forEach(r=>{if(num(r[k])!=null){s+=r[k];any=true;}});return any?s:null;}
  if(m.agg==="varpct"){let a=0,p=0;rows.forEach(r=>{if(num(r.var_abs)!=null&&num(r.pob_2017)){a+=r.var_abs;p+=r.pob_2017;}});return p>0?100*a/p:null;}
  if(m.agg==="dens"){let P=0,A=0;rows.forEach(r=>{if(num(r.dens_hab_ha)>0&&num(r.pob_2024)>0){P+=r.pob_2024;A+=r.pob_2024/r.dens_hab_ha;}});return A>0?P/A:null;}
@@ -146,7 +149,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=3"),
+ getJSON("data/kpis_comunas.json?v=4"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
@@ -299,8 +302,10 @@ function kpiCard(k,extraClass){const v=selAgg(k);const m=KPI[k];
   if(POS_HI.has(k))color=above?GREEN:RED;            // más es mejor
   else if(POS_LO.has(k))color=above?RED:GREEN;       // menos es mejor
   sub='<div class="s" style="color:'+color+'">'+arrow+' '+fmt(Math.abs(v-nat),m.dec)+(m.u==="%"?"%":"")+' vs nacional</div>';}
+ let cnt="";
+ if(m.cntKey){const nc=selAgg(m.cntKey);if(nc!=null)cnt='<div class="s" style="color:'+GREY+'">'+fmt(nc,0)+' viajes</div>';}
  return '<div class="kpi"><div class="'+cls+'">'+(k==="var_pct"&&v!=null?sg(fmt(v,1))+"%":fmtKpi(k,v))+
-   '</div><div class="l">'+m.lbl+(m.u&&m.u!=="%"?" ("+m.u+")":"")+'</div>'+sub+'</div>';}
+   '</div><div class="l">'+m.lbl+(m.u&&m.u!=="%"?" ("+m.u+")":"")+'</div>'+cnt+sub+'</div>';}
 function renderResumen(){const s=S.sel;
  document.getElementById("res-title").innerHTML=s.name+'<span class="bar"></span>';
  const pob=selAgg("pob_2024"),vp=selAgg("var_pct"),m2=selAgg("m2_total");
@@ -326,7 +331,7 @@ function renderResumen(){const s=S.sel;
  if(hasSii)h+='<div class="grp-hd">Uso de suelo — uso efectivo (Catastro SII)</div><div class="kpis">'+sii.map(k=>kpiCard(k)).join("")+'</div>';
  const avaluo=["avaluo_total","avaluo_pp","pct_exento"];
  if(s.rows.some(r=>num(r.avaluo_total)!=null))h+='<div class="grp-hd">Avalúo fiscal (Catastro SII)</div><div class="kpis">'+avaluo.map(k=>kpiCard(k)).join("")+'</div>';
- const movil=["pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera"];
+ const movil=["pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera"];
  if(s.rows.some(r=>num(r.pct_tpub)!=null))h+='<div class="grp-hd">Movilidad (Censo 2024)</div><div class="kpis">'+movil.map(k=>kpiCard(k)).join("")+'</div>';
  document.getElementById("res-kpis").innerHTML=h;
 }
@@ -447,7 +452,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -549,7 +554,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -655,7 +660,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -744,7 +749,7 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=4").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
@@ -779,28 +784,33 @@ function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
    TAB · MOVILIDAD (Censo 2024: P44 lugar de trabajo, P45 modo)
    ================================================================= */
 let mvC1=null,mvC2=null,mvC3=null,mvMap=null,mvLayer=null,mvLegend=null,mvKey="mv_tpub";
-const MV_LBL={mv_tpub:"Transporte público",mv_auto:"Auto",mv_activa:"Caminata + bicicleta"};
-const MV_RAMP={mv_tpub:"PuBu",mv_auto:"OrRd",mv_activa:"Greens"};
+const MV_LBL={mv_tpub:"Transporte público",mv_auto:"Auto",mv_camina:"A pie",mv_bici:"Bicicleta"};
+const MV_RAMP={mv_tpub:"PuBu",mv_auto:"OrRd",mv_camina:"Greens",mv_bici:"Viridis"};
 function renderMovilidad(){const s=S.sel;if(!s)return;
  document.getElementById("mv-title").firstChild.textContent="Movilidad: viajes al trabajo — "+s.name;
  const kp=document.getElementById("mv-kpis");
  if(!s.rows.some(r=>num(r.pct_tpub)!=null)){kp.innerHTML='<div class="note">Sin datos de movilidad para esta selección.</div>';return;}
- kp.innerHTML='<div class="kpis">'+["pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera"].map(k=>kpiCard(k)).join("")+'</div>';
- // C1: partición modal apilada (selección vs país)
- const part=rows=>{const o=aggregate(rows,"pct_tpub"),a=aggregate(rows,"pct_auto"),m=aggregate(rows,"pct_activa");
-   return [o||0,a||0,m||0,Math.max(0,100-(o||0)-(a||0)-(m||0))];};
- const selP=part(s.rows),natP=part(S.kpis);
+ kp.innerHTML='<div class="kpis">'+["ocup_modal","pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera"].map(k=>kpiCard(k)).join("")+'</div>';
+ // C1: partición modal apilada con cantidades (selección vs país), 5 modos
+ const cnts=rows=>{const g=k=>aggregate(rows,k)||0;
+   const tp=g("viajes_tpub"),au=g("viajes_auto"),ca=g("viajes_camina"),bi=g("viajes_bici"),ot=g("viajes_otros");
+   const tot=tp+au+ca+bi+ot||1;return {n:[tp,au,ca,bi,ot],tot};};
+ const sc=cnts(s.rows),nc=cnts(S.kpis);
+ const pct=(c,i)=>Math.round(1000*c.n[i]/c.tot)/10;
+ const cntFor=(isSel,i)=>(isSel?sc:nc).n[i];
  if(mvC1)mvC1.destroy();
  mvC1=new Chart(document.getElementById("mv-c1"),{type:"bar",
   data:{labels:[s.name,"Chile"],datasets:[
-   {label:"Transporte público",data:[selP[0],natP[0]],backgroundColor:"#2b8cbe",stack:"s"},
-   {label:"Auto",data:[selP[1],natP[1]],backgroundColor:"#e34a33",stack:"s"},
-   {label:"Caminata + bici",data:[selP[2],natP[2]],backgroundColor:"#31a354",stack:"s"},
-   {label:"Otros",data:[selP[3],natP[3]],backgroundColor:"#9aa7b4",stack:"s"}]},
+   {label:"Transporte público",data:[pct(sc,0),pct(nc,0)],backgroundColor:"#2b8cbe",stack:"s"},
+   {label:"Auto",data:[pct(sc,1),pct(nc,1)],backgroundColor:"#e34a33",stack:"s"},
+   {label:"A pie",data:[pct(sc,2),pct(nc,2)],backgroundColor:"#31a354",stack:"s"},
+   {label:"Bicicleta",data:[pct(sc,3),pct(nc,3)],backgroundColor:"#5ec962",stack:"s"},
+   {label:"Otros",data:[pct(sc,4),pct(nc,4)],backgroundColor:"#9aa7b4",stack:"s"}]},
   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
-    datalabels:{display:true,color:"#fff",font:{size:11,weight:"bold"},formatter:v=>v>=7?Math.round(v)+"%":""},
-    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.x,1)+"%"}}},
+    datalabels:{display:true,color:"#fff",font:{size:11,weight:"bold"},formatter:v=>v>=6?Math.round(v)+"%":""},
+    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.x,1)+"% ("+fmt(cntFor(c.dataIndex===0,c.datasetIndex),0)+" viajes)"}}},
    scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}}}});
+ document.getElementById("mv-c1s").innerHTML="Cómo se reparte el viaje al trabajo en la selección, comparado con el país. En total, <b>"+fmt(sc.tot,0)+" viajes</b> al trabajo en "+s.name+".";
  // mapa zonal de partición modal
  mvDrawMap(dataSlug());
  // atracción + teletrabajo por comuna (solo áreas metropolitanas)
@@ -912,7 +922,7 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
  if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
  const sel=document.getElementById("mv-sel");sel.value=mvKey;
  sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=4").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  geoP.then(gf=>{
   if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
   box.style.display="";ensureMvMap();
@@ -925,9 +935,11 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
    onEachFeature:(f,l)=>{const p=f.properties;
     l.on("mouseover",()=>l.setStyle({weight:2,color:"#1f4e79"}));
     l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+    const vc=k=>p.mv_n!=null&&p[k]!=null?' <span style="color:#888">('+fmtN(Math.round(p.mv_n*p[k]/100))+')</span>':'';
     l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+
-      '<br>Transporte público: <b>'+fmt(p.mv_tpub,1)+'%</b><br>Auto: <b>'+fmt(p.mv_auto,1)+'%</b>'+
-      '<br>Caminata + bici: <b>'+fmt(p.mv_activa,1)+'%</b>'+(p.mv_n?'<br><span style="color:#888">'+fmtN(p.mv_n)+' ocupados con modo declarado</span>':''));}
+      '<br>Transporte público: <b>'+fmt(p.mv_tpub,1)+'%</b>'+vc("mv_tpub")+'<br>Auto: <b>'+fmt(p.mv_auto,1)+'%</b>'+vc("mv_auto")+
+      '<br>A pie: <b>'+fmt(p.mv_camina,1)+'%</b>'+vc("mv_camina")+'<br>Bicicleta: <b>'+fmt(p.mv_bici,1)+'%</b>'+vc("mv_bici")+
+      (p.mv_n?'<br><span style="color:#888">'+fmtN(p.mv_n)+' ocupados con modo declarado</span>':''));}
   }).addTo(mvMap);
   if(mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});
   mvLegend=L.control({position:"bottomright"});
@@ -994,7 +1006,7 @@ const CMP_ROWS=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","pe
  "nse_score","casen_ing_pc","casen_pobreza_pct","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo",
  "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med",
  "avaluo_total","avaluo_pp","pct_exento",
- "pct_tpub","pct_auto","pct_activa","pct_teletrabajo","pct_fuera","viajes_atraidos"];
+ "pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera","viajes_atraidos"];
 function cmpTable(){const w=document.getElementById("cmp-tablewrap");
  if(!CMP.items.length){w.innerHTML='<div class="loading">Sin ciudades seleccionadas.</div>';return;}
  let h='<table><thead><tr><th>Indicador</th>'+CMP.items.map(it=>'<th>'+it.name+'</th>').join("")+
@@ -1193,7 +1205,8 @@ const RANKDIMS=[
  {g:"Avalúo fiscal (SII)",k:"pct_exento",src:"k",dir:"desc",lbl:"Mayor % de avalúo exento de contribuciones"},
  {g:"Movilidad (Censo 2024)",k:"pct_tpub",src:"k",dir:"desc",lbl:"Más uso de transporte público al trabajo"},
  {g:"Movilidad (Censo 2024)",k:"pct_auto",src:"k",dir:"desc",lbl:"Más uso de auto al trabajo"},
- {g:"Movilidad (Censo 2024)",k:"pct_activa",src:"k",dir:"desc",lbl:"Más movilidad activa (caminata + bicicleta)"},
+ {g:"Movilidad (Censo 2024)",k:"pct_camina",src:"k",dir:"desc",lbl:"Más viajes al trabajo a pie"},
+ {g:"Movilidad (Censo 2024)",k:"pct_bici",src:"k",dir:"desc",lbl:"Más viajes al trabajo en bicicleta"},
  {g:"Movilidad (Censo 2024)",k:"pct_teletrabajo",src:"k",dir:"desc",lbl:"Más teletrabajo"},
  {g:"Movilidad (Censo 2024)",k:"pct_fuera",src:"k",dir:"desc",lbl:"Más dependencia laboral de otras comunas (dormitorio)"},
  {g:"Movilidad (Censo 2024)",k:"viajes_atraidos",src:"k",dir:"desc",lbl:"Mayor atracción de viajes al trabajo"},
