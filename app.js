@@ -893,6 +893,17 @@ function odArrow(p1,p2,frac,size){
  const Xb=Xt-size*ux,Yb=Yt-size*uy,w=size*0.62,px=-uy,py=ux;
  const toLL=(X,Y)=>[Y,X/kx];
  return [toLL(Xb+w*px,Yb+w*py),toLL(Xt,Yt),toLL(Xb-w*px,Yb-w*py)];}
+// arco de Bézier cuadrático p1->p2; el punto de control se desplaza perpendicular
+// al punto medio (bend = fracción de la distancia) para curvar siempre al mismo lado
+function odBezier(p1,p2,bend){
+ const kx=Math.cos(p1[0]*Math.PI/180)||1;
+ const X1=p1[1]*kx,Y1=p1[0],X2=p2[1]*kx,Y2=p2[0];
+ const mx=(X1+X2)/2,my=(Y1+Y2)/2;let dx=X2-X1,dy=Y2-Y1;const L=Math.hypot(dx,dy)||1;
+ const cx=mx-(dy/L)*bend*L,cy=my+(dx/L)*bend*L;   // control = medio + perpendicular·bend
+ const pts=[],N=22;
+ for(let i=0;i<=N;i++){const t=i/N,u=1-t;
+  const X=u*u*X1+2*u*t*cx+t*t*X2,Y=u*u*Y1+2*u*t*cy+t*t*Y2;pts.push([Y,X/kx]);}
+ return pts;}
 let mvOdN=40;
 function renderOD(){const s=S.sel;
  const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
@@ -929,20 +940,23 @@ function odFlowMap(d){const s=S.sel;
   items.push(L.geoJSON(f,{style:{color:"#9aa7b4",weight:1,fillColor:"#9aa7b4",fillOpacity:.08,interactive:false}}));});
  const maxF=flows.length?flows[0].ab+flows[0].ba:1;
  flows.forEach(e=>{const tot=e.ab+e.ba;
-  const w=Math.max(1.4,12*Math.sqrt(tot/maxF));
+  const w=Math.max(1.4,11*Math.sqrt(tot/maxF));
   const na=titleCase(S.byCut[e.a].comuna),nb=titleCase(S.byCut[e.b].comuna);
-  const ln=L.polyline([cen[e.a],cen[e.b]],{color:OR,weight:w,opacity:.55});
   // sentido dominante (hacia la comuna que recibe más trabajadores del par)
   const fwd=e.ab>=e.ba, o=fwd?e.a:e.b, dst=fwd?e.b:e.a;
   const dom=Math.max(e.ab,e.ba), sub=Math.min(e.ab,e.ba);
   const dno=titleCase(S.byCut[o].comuna), dnd=titleCase(S.byCut[dst].comuna);
+  // arco curvo (Bézier) en el sentido dominante — siempre curvando al mismo lado
+  const path=odBezier(cen[o],cen[dst],0.16);
+  const ln=L.polyline(path,{color:OR,weight:w,opacity:.5,lineCap:"round",lineJoin:"round"});
   ln.bindPopup('<b>'+na+' ⇄ '+nb+'</b><br>'+na+' → '+nb+': <b>'+fmtN(e.ab)+'</b><br>'+nb+' → '+na+': <b>'+fmtN(e.ba)+'</b>'+
     '<br><span style="color:'+OR+'">▶ sentido dominante: '+dno+' → '+dnd+' (+'+fmtN(dom-sub)+' netos)</span>');
-  ln.on("mouseover",()=>ln.setStyle({opacity:.9,color:"#1f4e79"}));
-  ln.on("mouseout",()=>ln.setStyle({opacity:.55,color:OR}));
+  ln.on("mouseover",()=>ln.setStyle({opacity:.95,color:"#1f4e79"}));
+  ln.on("mouseout",()=>ln.setStyle({opacity:.5,color:OR}));
   items.push(ln);
-  // cabeza de flecha hacia el sentido dominante (tamaño leve según magnitud)
-  const tri=odArrow(cen[o],cen[dst],0.58,0.0055+0.004*Math.sqrt(tot/maxF));
+  // cabeza de flecha siguiendo la tangente de la curva cerca del destino
+  const i1=Math.floor(path.length*0.6),pa=path[i1],pb=path[Math.min(path.length-1,i1+2)];
+  const tri=odArrow(pa,pb,1,0.0055+0.004*Math.sqrt(tot/maxF));
   items.push(L.polygon(tri,{color:"#fff",weight:1,fillColor:"#1f4e79",fillOpacity:.9,interactive:false}));});
  // marcador con nombre en cada comuna
  Object.keys(cen).forEach(c=>{items.push(L.marker(cen[c],{interactive:false,icon:L.divIcon({className:"od-lbl",
