@@ -881,25 +881,34 @@ function odArrow(p1,p2,frac,size){
  const Xb=Xt-size*ux,Yb=Yt-size*uy,w=size*0.62,px=-uy,py=ux;
  const toLL=(X,Y)=>[Y,X/kx];
  return [toLL(Xb+w*px,Yb+w*py),toLL(Xt,Yt),toLL(Xb-w*px,Yb-w*py)];}
+let mvOdN=40;
 function renderOD(){const s=S.sel;
  const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
- const load=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
- load.then(d=>{
-  if(s.type==="metro"){bars.style.display="none";box.style.display="";odFlowMap(d);}
+ const loadOd=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
+ const loadC=S.centros?Promise.resolve(S.centros):getJSON("data/movilidad/centros.json").then(d=>{S.centros=d;return d;}).catch(()=>({}));
+ Promise.all([loadOd,loadC]).then(([d])=>{
+  if(s.type==="metro"){bars.style.display="none";box.style.display="";odWireN();odFlowMap(d);}
   else{box.style.display="none";bars.style.display="";odBars(d,String(s.key));}
  }).catch(()=>{box.style.display="none";bars.style.display="none";});}
+let mvOdNWired=false;
+function odWireN(){const sel=document.getElementById("mv-odn");if(!sel)return;
+ sel.value=String(mvOdN);
+ if(mvOdNWired)return;mvOdNWired=true;
+ sel.onchange=()=>{mvOdN=+sel.value;if(S.od)odFlowMap(S.od);};}
 function odFlowMap(d){const s=S.sel;
  const cuts=new Set(s.cuts.map(String));
- // centroides de las comunas del metro
+ // centro urbano (poblacional) de cada comuna; fallback al centroide geométrico
  const cen={};S.comunasGeo.features.forEach(f=>{const c=String(f.properties.cut);
-  if(cuts.has(c)){const p=odCentroid(f);if(p)cen[c]=p;}});
+  if(cuts.has(c)){const cc=(S.centros&&S.centros[c])||odCentroid(f);if(cc)cen[c]=cc;}});
  // pares dentro del metro, fusionando ambos sentidos en una línea
  const pair={};
  d.pares.forEach(([o,dd,n])=>{if(!cuts.has(o)||!cuts.has(dd))return;
   const key=o<dd?o+"|"+dd:dd+"|"+o;
   const e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
   if(o===e.a)e.ab+=n;else e.ba+=n;});
- const flows=Object.values(pair).filter(e=>cen[e.a]&&cen[e.b]).sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba)).slice(0,40);
+ const allFlows=Object.values(pair).filter(e=>cen[e.a]&&cen[e.b]).sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
+ const flows=mvOdN>=999?allFlows:allFlows.slice(0,mvOdN);
+ document.getElementById("mv-odn-info").textContent="Mostrando "+flows.length+" de "+allFlows.length+" pares con ≥100 viajes.";
  if(!mvOdMap){mvOdMap=L.map("mv-odmap",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvOdMap);}
  if(mvOdLayer){mvOdMap.removeLayer(mvOdLayer);mvOdLayer=null;}
  const items=[];

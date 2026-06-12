@@ -503,7 +503,14 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
     </div>
     <div class="chartbox" id="mv-odbox" style="margin-top:14px;display:none">
       <h3>Matriz origen-destino — flujos al trabajo entre comunas</h3>
-      <p>Cada línea une dos comunas del área metropolitana: el <b>grosor</b> indica cuántos ocupados viajan entre ellas y la <b style="color:#1f4e79">flecha</b> marca el <b>sentido dominante</b> (hacia la comuna que recibe más trabajadores del par). Haz clic en una línea para ver el detalle en ambos sentidos. Se muestran los pares con ≥100 viajes.</p>
+      <p>Cada línea une dos comunas del área metropolitana: el <b>grosor</b> indica cuántos ocupados viajan entre ellas y la <b style="color:#1f4e79">flecha</b> marca el <b>sentido dominante</b> (hacia la comuna que recibe más trabajadores del par). Los nodos están en el <b>centro urbano poblacional</b> de cada comuna. Haz clic en una línea para ver el detalle en ambos sentidos.</p>
+      <div class="panelctrl">
+        <div><label>Pares a mostrar</label><select id="mv-odn" class="kpisel">
+          <option value="15">Top 15</option><option value="30">Top 30</option>
+          <option value="40" selected>Top 40</option><option value="80">Top 80</option>
+          <option value="999">Todos</option></select></div>
+        <div class="desc" id="mv-odn-info"></div>
+      </div>
       <div id="mv-odmap" class="map"></div>
     </div>
     <div class="two" id="mv-odbars" style="margin-top:14px;display:none">
@@ -566,6 +573,6 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
