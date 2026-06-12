@@ -919,10 +919,19 @@ function renderOD(){const s=S.sel;
   else{bars.style.display="";odBars(d,String(s.key));}  // comuna: además, barras de destinos/orígenes
  }).catch(()=>{box.style.display="none";bars.style.display="none";});}
 let mvOdNWired=false;
-function odWireN(){const sel=document.getElementById("mv-odn");if(!sel)return;
- sel.value=String(mvOdN);
- if(mvOdNWired)return;mvOdNWired=true;
+function odWireN(){const sel=document.getElementById("mv-odn");if(!sel||mvOdNWired)return;mvOdNWired=true;
  sel.onchange=()=>{mvOdN=+sel.value;if(S.od)odFlowMap(S.od);};}
+// opciones del selector adaptadas al nº real de pares; oculta el control si hay pocos.
+// devuelve cuántos pares dibujar.
+function odFillN(total){
+ const wrap=document.getElementById("mv-odn-wrap"),sel=document.getElementById("mv-odn");
+ if(total<=15){if(wrap)wrap.style.display="none";return total;}   // nada que graduar: mostrar todos
+ if(wrap)wrap.style.display="";
+ const ths=[15,30,40,80,150].filter(v=>v<total);
+ sel.innerHTML=ths.map(v=>'<option value="'+v+'">Top '+v+'</option>').join("")+'<option value="999">Todos</option>';
+ if(mvOdN!==999&&!ths.includes(mvOdN))mvOdN=ths.length?ths[ths.length-1]:999;  // preferencia inválida → ajusta
+ sel.value=String(mvOdN);
+ return mvOdN>=999?total:Math.min(mvOdN,total);}
 function odFlowMap(d){const s=S.sel;const isMetro=s.type==="metro";
  const cen={},drawCuts=new Set();
  let allFlows;
@@ -950,8 +959,10 @@ function odFlowMap(d){const s=S.sel;const isMetro=s.type==="metro";
   document.getElementById("mv-od-desc").innerHTML='Cada arco une <b>'+s.name+'</b> con una comuna con la que intercambia trabajadores: <b>azul saliente</b> = sus residentes van a trabajar allá; <b>azul entrante</b> = de allá llegan a trabajar acá. El <b>grosor</b> es el total y la <b style="color:#1f4e79">flecha</b> el sentido dominante.';
  }
  allFlows.sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
- const flows=mvOdN>=999?allFlows:allFlows.slice(0,mvOdN);
- document.getElementById("mv-odn-info").textContent="Mostrando "+flows.length+" de "+allFlows.length+(isMetro?" pares":" comunas conectadas")+".";
+ const total=allFlows.length,eff=odFillN(total);
+ const flows=allFlows.slice(0,eff);
+ const unidad=isMetro?" pares":" comunas conectadas";
+ document.getElementById("mv-odn-info").textContent=(total<=15?"Mostrando los "+total:"Mostrando "+flows.length+" de "+total)+unidad+".";
  // mantener en cen/drawCuts solo lo que se dibuja (para encuadrar bien en comunas con muchas conexiones)
  if(!isMetro){const keep=new Set([String(s.key)]);flows.forEach(e=>{keep.add(e.a);keep.add(e.b);});
   Object.keys(cen).forEach(c=>{if(!keep.has(c))delete cen[c];});drawCuts.clear();keep.forEach(c=>drawCuts.add(c));}
