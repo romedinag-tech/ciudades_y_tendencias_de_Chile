@@ -528,6 +528,19 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
       </div>
       <div id="mv-odmap" class="map"></div>
     </div>
+    <div class="chartbox" id="mv-regbox" style="margin-top:14px;display:none">
+      <h3 id="mv-reg-title">Estructura regional del empleo — ¿uno o varios subcentros?</h3>
+      <p id="mv-reg-desc">Líneas de deseo de los viajes al trabajo <b>entre comunas de una misma región</b> (Censo 2024, P44). El <b>grosor</b> y el número sobre cada línea indican cuántos ocupados viajan entre ese par de comunas; la <b style="color:var(--accent)">flecha</b> marca el sentido dominante. El <b>tamaño del nodo</b> es cuántos trabajadores <b>atrae</b> la comuna desde el resto de la región: <b style="color:var(--navy)">azul oscuro</b> = polo principal, <b style="color:var(--accent)">azul</b> = subcentro (importador neto de empleo), <b style="color:var(--ink-lo)">gris</b> = comuna dormitorio. Así se ve si la región es monocéntrica o policéntrica.</p>
+      <div class="panelctrl">
+        <div id="mv-regn-wrap"><label>Relaciones a mostrar</label><select id="mv-regn" class="kpisel">
+          <option value="20">Top 20</option><option value="40" selected>Top 40</option>
+          <option value="80">Top 80</option><option value="999">Todas</option></select></div>
+        <div class="desc" id="mv-regn-info"></div>
+      </div>
+      <div id="mv-regmap" class="map"></div>
+      <p id="mv-regrank-t" style="margin:14px 0 2px;font-weight:600">Comunas por trabajadores que atraen desde el resto de la región</p>
+      <div class="cwrap" style="height:340px"><canvas id="mv-c7"></canvas></div>
+    </div>
     <div class="chartbox" id="mv-attpctbox" style="margin-top:14px;display:none">
       <h3 id="mv-attpct-t">Polos de empleo — top 10 por tasa de atracción</h3>
       <p>Comunas del área metropolitana ordenadas por <b>tasa de atracción</b>: de cada 100 personas que trabajan en la comuna, cuántas llegan desde <b>otra</b> comuna. Revela dónde se concentra el empleo metropolitano.</p>
@@ -602,7 +615,7 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=27"></script>
+<script src="app.js?v=28"></script>
 <script>
 /* Marco de figura institucional: eyebrow (fuente) + microlínea de fuente en cada figura.
    Solo presentación; no toca datos ni el wiring de los gráficos. */
