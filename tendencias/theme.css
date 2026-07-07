@@ -1,44 +1,50 @@
-/* Tema OSCURO (scoped a html.dark) — derivado del look Fluxus. Toggle claro/oscuro. */
-html.dark{--neural:#0D6EFD; --cyan:#18D6FF; --greenfx:#21F2C3;
-  --panel:#0A2348; --panel2:#0e2a55;
-  --grad:linear-gradient(135deg,#0D6EFD 0%,#18D6FF 50%,#21F2C3 100%);
-  
-  --navy:#0D6EFD; --navy2:#18D6FF; --or:#18D6FF; --teal:#18D6FF;
-  --green:#21F2C3; --red:#ff6b6b;
-  --bg:#071B35; --ink:#E6EEF8; --mut:#8AA0C7; --line:#16386a;}
+/* Tema OSCURO institucional sobrio (scoped a html.dark). Navy profundo, azul legible,
+   sin neón. Consume/redefine los tokens de tokens.css. Solo presentación. */
+html.dark{
+  /* superficies oscuras */
+  --paper:#0D1E33; --bg:#0D1E33; --surface:#14263D; --surface-alt:#1B3350;
+  --panel:#14263D; --panel2:#1B3350;
+  --line:#26405F; --line-2:#2E4A6B;
+  /* tinta */
+  --ink:#E7EDF5; --ink-mid:#9DB0C7; --ink-lo:#7C8FAB; --mut:#9DB0C7; --mut-2:#7C8FAB;
+  /* marca / interacción (azul institucional legible sobre oscuro, AA) */
+  --navy:#4C93F5; --navy2:#6BA3E8; --accent:#4C93F5; --focus:#6BA3E8;
+  --cyan:#6BA3E8; --neural:#2E6FD6;
+  /* acentos de dato (mudos) */
+  --or:#E0955F; --teal:#5FA9A0; --green:#5FB98F; --greenfx:#5FB98F; --red:#F08A82;
+  --grad:linear-gradient(135deg,#16365A 0%,#2E6FD6 100%);
+}
 html.dark{scroll-behavior:smooth}
-html.dark body{font-family:'Inter',Segoe UI,system-ui,-apple-system,sans-serif !important;
-  background:#071B35 !important; color:var(--ink) !important;
-  background-image:radial-gradient(rgba(120,180,255,.05) 1px,transparent 1.5px) !important;
-  background-size:30px 30px; background-attachment:fixed;}
-html.dark h1, html.dark h2, html.dark h3, html.dark h4{color:#fff !important; letter-spacing:-.01em}
+html.dark body{font-family:var(--font-ui) !important;
+  background:var(--bg) !important; color:var(--ink) !important; background-image:none !important;}
+html.dark h1, html.dark h2, html.dark h3, html.dark h4{color:#F4F8FF !important; letter-spacing:-.01em}
 html.dark a{color:var(--cyan)}
-html.dark header{background:linear-gradient(135deg,#031B4E 0%,#071B35 100%) !important;border-bottom:1px solid var(--line)}
-html.dark .warn{background:linear-gradient(135deg,#0D6EFD,#18D6FF) !important;color:#04223f !important}
-html.dark .warn a{color:#04223f !important;text-decoration:underline}
-html.dark .nav{background:#031B4E !important;border-bottom:1px solid var(--line)}
-html.dark .nav a{color:#a9c4e6 !important}
-html.dark .nav a.on{background:var(--panel) !important;color:#fff !important;border-bottom-color:var(--cyan) !important}
-html.dark .tag, html.dark .selbar{background:rgba(24,214,255,.08) !important;border:1px solid var(--line) !important}
-html.dark .tabs{background:#071B35 !important;border-bottom:1px solid var(--line)}
+html.dark header{background:linear-gradient(135deg,#0D1E33 0%,#14263D 100%) !important;border-bottom:1px solid var(--line)}
+html.dark .warn{background:var(--surface-alt) !important;color:#DCE6F4 !important;border-bottom:1px solid var(--line)}
+html.dark .warn a{color:var(--cyan) !important;text-decoration:underline}
+html.dark .nav{background:#0B1A2C !important;border-bottom:1px solid var(--line)}
+html.dark .nav a{color:#A9BEDA !important}
+html.dark .nav a.on{background:var(--panel) !important;color:#fff !important;border-bottom-color:var(--accent) !important}
+html.dark .tag, html.dark .selbar{background:rgba(76,147,245,.10) !important;border:1px solid var(--line) !important}
+html.dark .tabs{background:var(--bg) !important;border-bottom:1px solid var(--line)}
 html.dark .tabs button{color:var(--mut)}
-html.dark .tabs button.on{color:var(--cyan) !important;border-bottom-color:var(--cyan) !important}
+html.dark .tabs button.on{color:var(--accent) !important;border-bottom-color:var(--accent) !important}
 html.dark .tabs button:hover{color:#fff}
 html.dark .sidebar{background:var(--panel) !important;border-right:1px solid var(--line)}
 html.dark .rn-region, html.dark .rn-region+ .rn-region{border-bottom:1px solid var(--line)}
-html.dark .rn-head{color:#cfe0f7 !important}
+html.dark .rn-head{color:#CFDCEF !important}
 html.dark .rn-head:hover, html.dark .rn-comunas button:hover{background:var(--panel2) !important}
 html.dark .rn-head .cnt{background:var(--panel2) !important;color:var(--mut) !important}
-html.dark .rn-region.open>.rn-head{color:var(--cyan) !important}
-html.dark .rn-comunas button{color:#cfe0f7 !important}
+html.dark .rn-region.open>.rn-head{color:var(--accent) !important}
+html.dark .rn-comunas button{color:#CFDCEF !important}
 html.dark .rn-comunas button.on{background:var(--neural) !important;color:#fff !important}
 html.dark .kpi, html.dark .chartbox, html.dark .panelctrl, html.dark .cmp-pick, html.dark .tablewrap, html.dark .box, html.dark .empty, html.dark #cbox, html.dark #clist, html.dark .addrow input, html.dark .addrow #alist, html.dark .kpisel, html.dark .panelctrl select, html.dark .seg, html.dark .seg button, html.dark #evoPop, html.dark .cmp-pick input{background:var(--panel) !important;color:var(--ink) !important;border-color:var(--line) !important;
   box-shadow:none !important;}
-html.dark .kpi, html.dark .chartbox, html.dark .box{box-shadow:0 14px 40px rgba(24,214,255,.07) !important}
+html.dark .kpi, html.dark .chartbox, html.dark .box{box-shadow:0 12px 34px rgba(0,0,0,.28) !important}
 html.dark .card{background:var(--panel) !important;border-color:var(--line) !important}
-html.dark .card:hover{border-color:var(--cyan) !important;box-shadow:0 14px 40px rgba(24,214,255,.16) !important}
+html.dark .card:hover{border-color:var(--accent) !important;box-shadow:0 12px 34px rgba(0,0,0,.34) !important}
 html.dark input, html.dark select, html.dark textarea{background:var(--panel) !important;color:var(--ink) !important;border-color:var(--line) !important}
-html.dark ::placeholder{color:#6f87ad !important}
+html.dark ::placeholder{color:#778CAB !important}
 html.dark #cbox{font-weight:600}
 html.dark #clist .opt:hover, html.dark #clist .opt.hi, html.dark .addrow #alist .opt:hover, html.dark .addrow #alist .opt.hi{background:var(--panel2) !important}
 html.dark #clist .grouphd{background:var(--panel2) !important;color:var(--mut) !important}
@@ -46,11 +52,11 @@ html.dark .kpi .v{color:var(--cyan) !important}
 html.dark .kpi .v.or{color:var(--greenfx) !important}
 html.dark .kpi .l, html.dark .lead, html.dark .panelctrl label, html.dark .chartbox p{color:var(--mut) !important}
 html.dark .kpi .s{color:var(--cyan) !important}
-html.dark h2 .bar, html.dark .grp-hd{border-color:var(--cyan) !important}
+html.dark h2 .bar, html.dark .grp-hd{border-color:var(--accent) !important}
 html.dark h2 .bar{background:var(--grad) !important}
 html.dark .grp-hd{color:#fff !important}
 html.dark .seg button.on, html.dark .ctrl button.on{background:var(--neural) !important;color:#fff !important}
-html.dark .ctrl button{background:var(--panel) !important;color:var(--cyan) !important;border:1px solid #1f4f8a !important}
+html.dark .ctrl button{background:var(--panel) !important;color:var(--cyan) !important;border:1px solid var(--line) !important}
 html.dark .chip{background:var(--neural) !important;color:#fff !important}
 html.dark table{color:var(--ink)}
 html.dark th, html.dark td{border-bottom:1px solid var(--line) !important}
@@ -60,21 +66,21 @@ html.dark tbody tr:hover td, html.dark tbody tr:hover td:first-child{background:
 html.dark td.best{color:var(--greenfx) !important}
 html.dark td.worst{color:var(--red) !important}
 html.dark td.pos{color:var(--greenfx) !important}
-html.dark .map, html.dark #map, html.dark #zmap, html.dark .tendframe{border:1px solid var(--line) !important;background:#06224a !important}
+html.dark .map, html.dark #map, html.dark #zmap, html.dark .tendframe{border:1px solid var(--line) !important;background:#0D1E33 !important}
 html.dark .tendframe{background:transparent !important}
-html.dark .leaflet-container{background:#06122a !important}
-html.dark .legend, html.dark .info{background:var(--panel) !important;color:var(--ink) !important;box-shadow:0 10px 30px rgba(0,0,0,.4) !important}
+html.dark .leaflet-container{background:#08182B !important}
+html.dark .legend, html.dark .info{background:var(--panel) !important;color:var(--ink) !important;box-shadow:0 10px 30px rgba(0,0,0,.45) !important}
 html.dark .legend b, html.dark .info b{color:var(--cyan) !important}
-html.dark .note{background:var(--panel2) !important;border:1px solid var(--line) !important;border-left:4px solid var(--cyan) !important;color:#cdddf3 !important}
+html.dark .note{background:var(--panel2) !important;border:1px solid var(--line) !important;border-left:4px solid var(--accent) !important;color:#CFDCEF !important}
 html.dark footer{color:var(--mut) !important;border-top:1px solid var(--line) !important}
 html.dark #evoPop h4{color:var(--cyan) !important}
-html.dark .uname{border-bottom-color:#3a5a82 !important;color:#cfe0f7 !important}
+html.dark .uname{border-bottom-color:var(--line) !important;color:#CFDCEF !important}
 /* controles y elementos nuevos en oscuro */
-html.dark .leaflet-bar a,html.dark .leaflet-control-layers,html.dark .leaflet-control-layers-toggle{background:#0e2a55 !important;color:#dbe8fb !important;border-color:#16386a !important}
-html.dark .fs-ctrl a{color:#dbe8fb}
-html.dark .author-wm{background:rgba(10,35,72,.85) !important;color:#bcd0ec !important}
-html.dark .sharebtn{background:rgba(24,214,255,.14) !important;border-color:rgba(24,214,255,.3) !important}
-html.dark .foot-src{color:#7e93b5 !important}
-html.dark .tabs button .ti{color:#6f87ad}
-html.dark .tabs button.on .ti,html.dark .tabs button:hover .ti{color:var(--cyan)}
-html.dark .skel{background:#0e2a55}
+html.dark .leaflet-bar a,html.dark .leaflet-control-layers,html.dark .leaflet-control-layers-toggle{background:var(--panel2) !important;color:#DBE8FB !important;border-color:var(--line) !important}
+html.dark .fs-ctrl a{color:#DBE8FB}
+html.dark .author-wm{background:rgba(13,30,51,.85) !important;color:#BCCFE8 !important}
+html.dark .sharebtn{background:rgba(76,147,245,.16) !important;border-color:rgba(76,147,245,.32) !important}
+html.dark .foot-src{color:#7E92B2 !important}
+html.dark .tabs button .ti{color:#778CAB}
+html.dark .tabs button.on .ti,html.dark .tabs button:hover .ti{color:var(--accent)}
+html.dark .skel{background:#1B3350}

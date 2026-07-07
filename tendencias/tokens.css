@@ -1,0 +1,64 @@
+/* ============================================================================
+   tokens.css — FUENTE ÚNICA de color y tipografía (tema claro institucional).
+   Cargar PRIMERO. Prohibido hex sueltos fuera de aquí (charts en app.js: Fase 3).
+   Tema: papel institucional claro (no oscuro). El override oscuro vive en theme.css.
+   ========================================================================== */
+:root{
+  /* --- Superficies / papel --- */
+  --paper:#FBFBFD;           /* fondo de app (papel) */
+  --surface:#FFFFFF;         /* tarjeta / figura */
+  --surface-alt:#F4F6F9;     /* bloque secundario */
+  --line:#E3E8EF;            /* hairline */
+  --line-2:#D6DEE9;          /* hairline más marcada */
+
+  /* --- Tinta / texto --- */
+  --ink:#0E2338;             /* texto primario (navy casi negro) */
+  --ink-mid:#4A5A70;         /* texto secundario */
+  --ink-lo:#7C8AA0;          /* captions / fuentes */
+
+  /* --- Marca / interacción --- */
+  --navy:#16365a;            /* institucional: headers, nav, marca (theme-color) */
+  --navy2:#21507F;           /* navy claro (degradados) */
+  --navy-d:#0E2338;          /* navy más oscuro */
+  --accent:#1F6FEB;          /* interacción/selección: enlaces, comuna activa */
+  --focus:#1F6FEB;           /* anillo de foco de teclado (AA) */
+
+  /* --- Aliases legacy (los consume el CSS y app.js existentes) --- */
+  --bg:var(--paper);
+  --surface-2:var(--surface-alt);
+  --mut:var(--ink-mid);
+  --mut-2:var(--ink-lo);
+  --or:#C55A11;              /* terracota muda (acento cálido puntual) */
+  --teal:#3F8E86;            /* verde-azul mudo */
+  --green:#2E8B57;           /* verde mudo */
+  --red:#B2182B;             /* rojo divergente */
+  --amber:#C08A1E;           /* ámbar mudo */
+
+  /* --- Gradiente institucional --- */
+  --grad:linear-gradient(135deg,#0E2338 0%,#16365a 60%,#21507F 100%);
+
+  /* --- Radios --- */
+  --r:14px;--r-sm:10px;--r-lg:18px;
+
+  /* --- Sombras (sutiles, institucional = plano) --- */
+  --sh-sm:0 1px 2px rgba(14,35,56,.04),0 1px 3px rgba(14,35,56,.04);
+  --sh:0 1px 3px rgba(14,35,56,.05),0 8px 24px rgba(14,35,56,.05);
+  --sh-lg:0 14px 40px rgba(14,35,56,.11);
+
+  /* --- Tipografía (autoridad editorial) --- */
+  --font-display:'Source Serif 4','Georgia','Times New Roman',serif;   /* titulares — gravedad */
+  --font-ui:'Inter',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; /* cuerpo/UI */
+  --font-data:'Inter',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; /* cifras (con tabular-nums) */
+  --sans:var(--font-ui);     /* alias legacy */
+
+  /* ==========================================================================
+     PALETAS DE DATO — colorblind-safe (ColorBrewer/científicas). NO arcoíris.
+     Se aplican en Fase 3 (gráficos) y Fase 4 (mapas). Documentadas aquí.
+     ---------------------------------------------------------------------- */
+  /* Divergente (pierde ↔ neutro ↔ gana; ej. variación intercensal) */
+  --div-neg:#B2182B;  --div-neg-2:#EF8A62;  --div-mid:#F0F0F0;  --div-pos-2:#67A9CF;  --div-pos:#2166AC;
+  /* Secuencial single-hue azul (coroplético por quintil, 5 pasos, claro→oscuro) */
+  --seq-1:#EFF3FB; --seq-2:#C6D9F0; --seq-3:#8CB3DE; --seq-4:#4A80C0; --seq-5:#16365A;
+  /* Categórica muda ≤6 (partición modal, tipos de uso) — distinguibles p/ daltónicos */
+  --cat-1:#16365A; --cat-2:#1F6FEB; --cat-3:#C55A11; --cat-4:#3F8E86; --cat-5:#8A6FB0; --cat-6:#9AA7B4;
+}

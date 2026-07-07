@@ -4,10 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tendencias por uso de suelo · 2030 / 2035 (Chile)</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="tokens.css?v=1"/>
 <style>
-:root{--navy:#1f4e79;--or:#c55a11;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;--sans:'Inter',-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+/* Paleta y tipografía: tokens.css (fuente única). */
 *{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
 .kpi .v,table,th,td{font-variant-numeric:tabular-nums}
 .author-wm{font:600 11px/1 var(--sans);color:rgba(40,55,75,.7);background:rgba(255,255,255,.8);padding:3px 7px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
@@ -17,21 +18,21 @@
 .warn{background:#c55a11;color:#fff;padding:8px 16px;font-size:.85rem;text-align:center;font-weight:600}.warn a{color:#fff}
 .nav{background:#173a5a;display:flex;flex-wrap:wrap}
 .nav a{color:#cfe0ef;text-decoration:none;padding:10px 18px;font-weight:600;font-size:.9rem;border-bottom:3px solid transparent}
-.nav a.on{color:#fff;border-bottom-color:var(--or);background:#1f4e79}
-header{background:linear-gradient(135deg,#1f4e79,#2e5e8c);color:#fff;padding:22px}
+.nav a.on{color:#fff;border-bottom-color:var(--or);background:#16365a}
+header{background:var(--grad);color:#fff;padding:22px}
 .wrap{max-width:1200px;margin:0 auto;padding:0 18px}
-h1{margin:0 0 4px;font-size:1.45rem}.lead{opacity:.92;font-size:.92rem;max-width:920px}
+h1{margin:0 0 4px;font-size:1.45rem;font-family:var(--font-display);font-weight:700}.lead{opacity:.92;font-size:.92rem;max-width:920px}
 .panel{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px}
 label{display:block;font-size:.74rem;color:var(--mut);font-weight:600;margin-bottom:4px}
-select{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:8px;min-width:230px}
-.seg{display:inline-flex;border:1px solid #c7d2de;border-radius:8px;overflow:hidden}
+select{font-size:.95rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:230px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:none;background:#fff;color:var(--navy);padding:8px 14px;cursor:pointer;font-weight:600;font-size:.88rem}
 .seg button.on{background:var(--navy);color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
 .kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px}
 .kpi .v{font-size:1.35rem;font-weight:800;color:var(--navy)}.kpi .l{color:var(--mut);font-size:.78rem;margin-top:3px}.kpi .s{font-weight:700;font-size:.82rem}
 .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-top:16px}@media(max-width:880px){.grid{grid-template-columns:1fr}}
-.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}.box h3{margin:0 0 2px;color:var(--navy);font-size:1.02rem}.box p{margin:0 0 8px;color:var(--mut);font-size:.84rem}
+.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}.box h3{margin:0 0 2px;color:var(--navy);font-size:1.02rem;font-family:var(--font-display);font-weight:600}.box p{margin:0 0 8px;color:var(--mut);font-size:.84rem}
 .cwrap{position:relative;height:340px}
 table{border-collapse:collapse;width:100%;font-size:.84rem;margin-top:14px}td,th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--navy);color:#fff}
 td.pos{color:#1a9850;font-weight:700}
@@ -53,8 +54,8 @@ footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
   #evoPop{width:280px}#evoPop .ec{height:150px}
 }
 </style>
-<link rel="stylesheet" href="theme.css?v=1"/>
-<script>(function(){var p=new URLSearchParams(location.search);if(p.has("embed"))document.documentElement.classList.add("embed");try{var t=p.get("theme")||localStorage.getItem("theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
+<link rel="stylesheet" href="theme.css?v=2"/>
+<script>(function(){var p=new URLSearchParams(location.search);if(p.has("embed"))document.documentElement.classList.add("embed");try{var t=p.get("theme")||localStorage.getItem("theme");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
 <div class="warn">El visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</div>
@@ -113,7 +114,7 @@ footer{padding:22px;color:var(--mut);font-size:.82rem;text-align:center}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const USOS=["Habitacional","Comercio","Educacion","Salud","Oficina","Industria"];
-const UC={Habitacional:"#1f4e79",Comercio:"#c55a11",Educacion:"#21918c",Salud:"#d73027",Oficina:"#8856a7",Industria:"#9aa7b4"};
+const UC={Habitacional:"#16365a",Comercio:"#c55a11",Educacion:"#21918c",Salud:"#d73027",Oficina:"#8856a7",Industria:"#9aa7b4"};
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
 const CARTO_LIGHT="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -271,7 +272,7 @@ function render(){const o=CUR;if(!o)return;
  const yrs=["2024","2030","2035"];
  if(cQty)cQty.destroy();
  cQty=new Chart(document.getElementById("cQty"),{type:"bar",
-  data:{labels:USOS,datasets:yrs.map((y,i)=>({label:y,backgroundColor:["#cbd6e2","#5e84ad","#1f4e79"][i],
+  data:{labels:USOS,datasets:yrs.map((y,i)=>({label:y,backgroundColor:["#cbd6e2","#5e84ad","#16365a"][i],
     data:USOS.map(u=>y==="2024"?o.usos[u]["2024"]:o.usos[u][y][scen])}))},
   options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},
     tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.y)+" m²"}}},

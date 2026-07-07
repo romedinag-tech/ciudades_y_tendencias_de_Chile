@@ -4,10 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tendencias demográficas · 2030 / 2035 (Chile)</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="tokens.css?v=1"/>
 <style>
-:root{--navy:#1f4e79;--or:#c55a11;--bg:#f7f9fc;--ink:#1c2733;--mut:#5b6b7b;--line:#e6ebf1;--sans:'Inter',-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+/* Paleta y tipografía: tokens.css (fuente única). */
 *{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;-webkit-font-smoothing:antialiased}
 .kpi .v,table,th,td{font-variant-numeric:tabular-nums}
 .author-wm{font:600 11px/1 var(--sans);color:rgba(40,55,75,.7);background:rgba(255,255,255,.8);padding:3px 7px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
@@ -18,15 +19,15 @@
 .warn a{color:#fff;text-decoration:underline}
 .nav{background:#173a5a;display:flex;gap:0;flex-wrap:wrap}
 .nav a{color:#cfe0ef;text-decoration:none;padding:10px 18px;font-weight:600;font-size:.9rem;border-bottom:3px solid transparent}
-.nav a.on{color:#fff;border-bottom-color:var(--or);background:#1f4e79}
-header{background:linear-gradient(135deg,#1f4e79,#2e5e8c);color:#fff;padding:24px 22px}
+.nav a.on{color:#fff;border-bottom-color:var(--or);background:#16365a}
+header{background:linear-gradient(135deg,#16365a,#2e5e8c);color:#fff;padding:24px 22px}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-h1{margin:0 0 6px;font-size:1.5rem}h2{color:var(--navy);font-size:1.2rem;margin:26px 0 4px}
+h1{margin:0 0 6px;font-size:1.5rem;font-family:var(--font-display);font-weight:700}h2{color:var(--ink);font-size:1.2rem;margin:26px 0 4px;font-family:var(--font-display);font-weight:600}
 .lead{color:var(--mut);max-width:920px}.lead.w{color:#ffe;opacity:.92}
 .panel{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px}
 label{display:block;font-size:.74rem;color:var(--mut);font-weight:600;margin-bottom:4px}
-select{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:8px;min-width:240px}
-.seg{display:inline-flex;border:1px solid #c7d2de;border-radius:8px;overflow:hidden}
+select{font-size:.95rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:240px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:none;background:#fff;color:var(--navy);padding:8px 13px;cursor:pointer;font-weight:600;font-size:.86rem}
 .seg button.on{background:var(--navy);color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-top:14px}
@@ -34,7 +35,7 @@ select{font-size:.95rem;padding:8px 10px;border:1px solid #c7d2de;border-radius:
 .kpi .v{font-size:1.4rem;font-weight:800;color:var(--navy)}.kpi .l{color:var(--mut);font-size:.78rem;margin-top:3px}
 .kpi .s{color:var(--or);font-weight:700;font-size:.82rem}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}@media(max-width:840px){.grid2{grid-template-columns:1fr}}
-.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}.box h3{margin:0 0 2px;color:var(--navy);font-size:1.02rem}.box p{margin:0 0 8px;color:var(--mut);font-size:.84rem}
+.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}.box h3{margin:0 0 2px;color:var(--navy);font-size:1.02rem;font-family:var(--font-display);font-weight:600}.box p{margin:0 0 8px;color:var(--mut);font-size:.84rem}
 .cwrap{position:relative;height:300px}
 #map,#zmap{height:520px;border-radius:12px;border:1px solid var(--line);margin-top:8px}
 table{border-collapse:collapse;width:100%;font-size:.83rem;margin-top:8px}th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--navy);color:#fff}
@@ -53,8 +54,8 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
   h2{font-size:1.1rem}.lead{font-size:.86rem}
 }
 </style>
-<link rel="stylesheet" href="theme.css?v=1"/>
-<script>(function(){var p=new URLSearchParams(location.search);if(p.has("embed"))document.documentElement.classList.add("embed");try{var t=p.get("theme")||localStorage.getItem("theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
+<link rel="stylesheet" href="theme.css?v=2"/>
+<script>(function(){var p=new URLSearchParams(location.search);if(p.has("embed"))document.documentElement.classList.add("embed");try{var t=p.get("theme")||localStorage.getItem("theme");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
 <div class="warn">El visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</div>
@@ -104,7 +105,7 @@ footer{padding:24px;color:var(--mut);font-size:.82rem;text-align:center}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-const NAVY="#1f4e79",OR="#c55a11",USOS=["Habitacional","Comercio","Educacion","Salud","Oficina","Industria"];
+const NAVY="#16365a",OR="#c55a11",USOS=["Habitacional","Comercio","Educacion","Salud","Oficina","Industria"];
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
 // marca de autor en mapas y gráficos (viaja en capturas)
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
@@ -179,7 +180,7 @@ function renderDem(o){CURDEM=o;const d=o.demografia;
 function renderEnv(o){CURENV=o;refreshKpis();
  // gráfico tipo histograma del índice por año (observado <=2024 lleno, proyección claro)
  const yrs=o.anios,idx=o.idx65,J24=yrs.indexOf(2024);
- const colObs="#1f4e79",colProj="#9ec3e6";
+ const colObs="#16365a",colProj="#9ec3e6";
  if(cEnv)cEnv.destroy();
  cEnv=new Chart(document.getElementById("cEnv"),{type:"bar",
   data:{labels:yrs,datasets:[{label:"Índice 65+/<15",data:idx,
