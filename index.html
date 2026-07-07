@@ -573,6 +573,11 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
     <h2>Tendencias de uso de suelo · 2030 / 2035<span class="bar"></span></h2>
     <p class="lead">Proyección de m² construidos por uso (Habitacional, Comercio, Educación, Salud, Oficina, Industria) a nivel de zona, con escenarios. El visor entrega la <b>tendencia estadística base a escala nacional</b>; la capacidad normativa —alturas, usos y oferta máxima edificable por zona del <b>Plan Regulador</b>— se incorpora en los <b>estudios a medida</b>, donde la proyección se calibra ciudad a ciudad.</p>
     <iframe class="tendframe" id="if-suelo" data-src="tendencias/usos.html?embed=1" title="Tendencias de uso de suelo" loading="lazy"></iframe>
+    <aside class="callout-service" style="margin-top:16px">
+      <div class="cs-eyebrow">Estudios a medida</div>
+      <div class="cs-title">Del dato nacional a tu Plan Regulador</div>
+      <p class="cs-text">Este visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona— se calibra <b>ciudad a ciudad</b> en estudios a medida.</p>
+    </aside>
   </section>
 
 </main>
@@ -585,14 +590,6 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
 </section>
 </div><!-- /.content -->
 </div><!-- /.layout -->
-
-<section class="wrap" style="padding:16px 20px 0">
-  <aside class="callout-service">
-    <div class="cs-eyebrow">Estudios a medida</div>
-    <div class="cs-title">Del dato nacional a tu Plan Regulador</div>
-    <p class="cs-text">Este visor entrega la <b>tendencia estadística base a escala nacional</b>. La capacidad normativa —alturas, usos y oferta máxima edificable por zona— se calibra <b>ciudad a ciudad</b> en estudios a medida.</p>
-  </aside>
-</section>
 
 <footer><div class="wrap">
   <div class="foot-credit">Análisis, modelo y desarrollo · <b>By Rodrigo Medina González</b> · Universidad de Concepción</div>
@@ -615,7 +612,7 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=29"></script>
+<script src="app.js?v=30"></script>
 <script>
 /* Marco de figura institucional: eyebrow (fuente) + microlínea de fuente en cada figura.
    Solo presentación; no toca datos ni el wiring de los gráficos. */

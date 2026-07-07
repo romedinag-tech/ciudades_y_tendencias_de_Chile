@@ -156,7 +156,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zรกร
 Promise.all([
  getJSON("data/kpis_comunas.json?v=4"),
  getJSON("data/metro_areas.json"),
- getJSON("data/comunas.geojson"),
+ getJSON("data/comunas.geojson?v=2"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
  getJSON("data/crecimiento_index.json").catch(()=>({slugs:[]})),
  getJSON("data/ranking_growth.json").catch(()=>({})),
