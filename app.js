@@ -1044,72 +1044,115 @@ function regFlowMap(){const s=S.sel,box=document.getElementById("mv-regbox");
  const rc=String((S.byCut[String(s.cuts[0])]||{}).region_cod||"");
  const blk=S.odReg&&S.odReg.regiones?S.odReg.regiones[rc]:null;
  if(!blk||!blk.pares||!blk.pares.length){box.style.display="none";return;}
- box.style.display="";
+ const isMetro=s.type==="metro";
+ const M=new Set((s.cuts||[]).map(String)), METRO="__metro__";
  const nod=blk.nodos||{};
- const cuts=Object.keys(nod);
- const atr=c=>(nod[c]||{}).atrae||0, gen=c=>(nod[c]||{}).genera||0;
- const maxA=Math.max(1,...cuts.map(atr));
- const ranked=cuts.slice().sort((a,b)=>atr(b)-atr(a));
- const primary=ranked[0];
- // clasificación: polo principal / subcentro (importador neto significativo) / dormitorio o menor
- const cls=c=>atr(c)<=0?"min":(c===primary?"primary":((atr(c)>gen(c)&&atr(c)>=0.10*maxA)?"sub":"min"));
+ // flujos dirigidos: comuna = todos los pares intrarregionales; metro = SOLO metro<->externa (omite internos)
+ const dir={};
+ blk.pares.forEach(function(p){var o=p[0],d=p[1],n=p[2];
+  if(isMetro){var oM=M.has(o),dM=M.has(d);
+   if(oM===dM)return;                       // ambos internos o ambos externos -> descartar
+   var O=oM?METRO:o,D=dM?METRO:d;dir[O+">"+D]=(dir[O+">"+D]||0)+n;}
+  else{if(o===d)return;dir[o+">"+d]=(dir[o+">"+d]||0)+n;}});
+ // atracción/generación por nodo (metro: desde los flujos metro<->externa; comuna: totales precomputados)
+ const atrM={},genM={};
+ Object.keys(dir).forEach(function(k){var a=k.split(">"),n=dir[k];atrM[a[1]]=(atrM[a[1]]||0)+n;genM[a[0]]=(genM[a[0]]||0)+n;});
+ const atr=id=>isMetro?(atrM[id]||0):((nod[id]||{}).atrae||0);
+ const gen=id=>isMetro?(genM[id]||0):((nod[id]||{}).genera||0);
+ // el nodo metro se ubica en su comuna núcleo (mayor atracción)
+ let metroCen=null;
+ if(isMetro){var bA=-1,core=null;M.forEach(function(c){var a=(nod[c]||{}).atrae||0;if(a>bA){bA=a;core=c;}});metroCen=core?comCentro(core):null;}
+ const cenOf=id=>id===METRO?metroCen:comCentro(id);
+ const nodeName=id=>id===METRO?s.name:(S.byCut[id]?titleCase(S.byCut[id].comuna):id);
+ // clasificación (comuna: vs máximo regional; metro: externa es importador si recibe más del área que lo que envía)
+ const regMaxA=Math.max(1,...Object.keys(nod).map(c=>(nod[c]||{}).atrae||0));
+ const rankedAll=Object.keys(nod).slice().sort((a,b)=>((nod[b]||{}).atrae||0)-((nod[a]||{}).atrae||0));
+ const primary=isMetro?METRO:rankedAll[0];
+ const cls=id=>id===primary?"primary":(isMetro?(atr(id)>gen(id)?"sub":"min"):(atr(id)<=0?"min":((atr(id)>gen(id)&&atr(id)>=0.10*regMaxA)?"sub":"min")));
  const COLC={primary:NAVY,sub:ACCENT,min:GREY};
- // pares dirigidos -> flujos no dirigidos con sentido dominante
+ // pares no dirigidos con sentido dominante
  const pair={};
- blk.pares.forEach(([o,d,n])=>{const key=o<d?o+"|"+d:d+"|"+o;
-  const e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
-  if(o===e.a)e.ab+=n;else e.ba+=n;});
- let flows=Object.values(pair).filter(e=>comCentro(e.a)&&comCentro(e.b)&&S.byCut[e.a]&&S.byCut[e.b]);
+ Object.keys(dir).forEach(function(k){var a=k.split(">"),O=a[0],D=a[1],n=dir[k];
+  var key=O<D?O+"|"+D:D+"|"+O;var e=pair[key]=pair[key]||{a:key.split("|")[0],b:key.split("|")[1],ab:0,ba:0};
+  if(O===e.a)e.ab+=n;else e.ba+=n;});
+ let flows=Object.values(pair).filter(e=>cenOf(e.a)&&cenOf(e.b));
  flows.sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
  const total=flows.length,eff=regFillN(total);flows=flows.slice(0,eff);
- document.getElementById("mv-reg-title").textContent="Estructura del empleo — Región "+(blk.nombre||rc)+" ("+total+" relaciones)";
- document.getElementById("mv-regn-info").textContent=(total<=15?"Mostrando las "+total:"Mostrando "+flows.length+" de "+total)+" relaciones intercomunales (≥ "+S.odReg.umbral+" viajes).";
- const cen={},drawCuts=new Set();
- flows.forEach(e=>{[e.a,e.b].forEach(c=>{const cc=comCentro(c);if(cc){cen[c]=cc;drawCuts.add(c);}});});
+ box.style.display="";
+ document.getElementById("mv-reg-title").textContent=isMetro
+  ? "Relaciones de "+s.name+" con comunas externas — Región "+(blk.nombre||rc)
+  : "Estructura del empleo — Región "+(blk.nombre||rc)+" ("+total+" relaciones)";
+ document.getElementById("mv-reg-desc").innerHTML=isMetro
+  ? 'Se <b>omiten los viajes internos</b> del área metropolitana y se muestran solo sus <b>relaciones laborales con comunas externas</b> de la región (Censo 2024, P44). El <b>grosor</b> y el número sobre cada línea son los viajes entre el área y esa comuna; la <b style="color:var(--accent)">flecha</b> marca el sentido dominante. <b style="color:var(--navy)">Azul oscuro</b> = área metropolitana; cada comuna externa aparece <b style="color:var(--accent)">azul</b> si atrae empleo del área (importador neto) o <b style="color:var(--ink-lo)">gris</b> si le envía trabajadores (dormitorio).'
+  : 'Líneas de deseo de los viajes al trabajo <b>entre comunas de una misma región</b> (Censo 2024, P44). El <b>grosor</b> y el número sobre cada línea indican cuántos ocupados viajan entre ese par; la <b style="color:var(--accent)">flecha</b> marca el sentido dominante. El <b>tamaño del nodo</b> es cuántos trabajadores <b>atrae</b> la comuna desde el resto de la región: <b style="color:var(--navy)">azul oscuro</b> = polo principal, <b style="color:var(--accent)">azul</b> = subcentro, <b style="color:var(--ink-lo)">gris</b> = comuna dormitorio.';
+ document.getElementById("mv-regn-info").textContent=(total<=15?"Mostrando las "+total:"Mostrando "+flows.length+" de "+total)+" relaciones "+(isMetro?"con comunas externas":"intercomunales")+" (≥ "+S.odReg.umbral+" viajes).";
+ // nodos dibujados + centroides
+ const idset=new Set();flows.forEach(e=>{idset.add(e.a);idset.add(e.b);});
+ const idList=[...idset];const cen={};idList.forEach(id=>{var c=cenOf(id);if(c)cen[id]=c;});
+ flows=flows.filter(e=>cen[e.a]&&cen[e.b]);
+ const wt=id=>isMetro?(atr(id)+gen(id)):((nod[id]||{}).atrae||0);
+ const maxW=Math.max(1,...idList.map(wt));
  if(!mvRegMap){mvRegMap=L.map("mv-regmap",{preferCanvas:true}).setView([-36.8,-73],9);mapChrome(mvRegMap);}
  if(mvRegLayer){mvRegMap.removeLayer(mvRegLayer);mvRegLayer=null;}
  const items=[];
- S.comunasGeo.features.forEach(f=>{const c=String(f.properties.cut);if(!drawCuts.has(c))return;
-  const k=cls(c);
+ // polígonos de contexto (metro: todos sus miembros en azul; resto por clase)
+ S.comunasGeo.features.forEach(function(f){var c=String(f.properties.cut);
+  if(isMetro&&M.has(c)){items.push(L.geoJSON(f,{style:{color:NAVY,weight:.7,fillColor:NAVY,fillOpacity:.13,interactive:false}}));return;}
+  if(!cen[c])return;var k=cls(c);
   items.push(L.geoJSON(f,{style:{color:"#9aa7b4",weight:.6,fillColor:COLC[k],fillOpacity:k==="min"?.05:.10,interactive:false}}));});
  const maxF=flows.length?flows[0].ab+flows[0].ba:1;
- flows.forEach((e,i)=>{const tot=e.ab+e.ba;
-  const w=Math.max(1.4,11*Math.sqrt(tot/maxF));
-  const na=titleCase(S.byCut[e.a].comuna),nb=titleCase(S.byCut[e.b].comuna);
-  const fwd=e.ab>=e.ba,o=fwd?e.a:e.b,dst=fwd?e.b:e.a;
-  const dom=Math.max(e.ab,e.ba),subm=Math.min(e.ab,e.ba);
-  const path=odBezier(cen[o],cen[dst],0.16);
-  const ln=L.polyline(path,{color:OR,weight:w,opacity:.5,lineCap:"round",lineJoin:"round"});
+ flows.forEach(function(e,i){var tot=e.ab+e.ba;
+  var w=Math.max(1.4,11*Math.sqrt(tot/maxF));
+  var na=nodeName(e.a),nb=nodeName(e.b);
+  var fwd=e.ab>=e.ba,o=fwd?e.a:e.b,dst=fwd?e.b:e.a;
+  var dom=Math.max(e.ab,e.ba),subm=Math.min(e.ab,e.ba);
+  var path=odBezier(cen[o],cen[dst],0.16);
+  var ln=L.polyline(path,{color:OR,weight:w,opacity:.5,lineCap:"round",lineJoin:"round"});
   ln.bindPopup('<b>'+na+' ⇄ '+nb+'</b><br>'+na+' → '+nb+': <b>'+fmtN(e.ab)+'</b><br>'+nb+' → '+na+': <b>'+fmtN(e.ba)+'</b>'+
-    '<br><span style="color:'+ACCENT+'">▶ dominante: '+titleCase(S.byCut[o].comuna)+' → '+titleCase(S.byCut[dst].comuna)+' (+'+fmtN(dom-subm)+' netos)</span>');
+    '<br><span style="color:'+ACCENT+'">▶ dominante: '+nodeName(o)+' → '+nodeName(dst)+' (+'+fmtN(dom-subm)+' netos)</span>');
   ln.on("mouseover",()=>ln.setStyle({opacity:.95,color:ACCENT}));
   ln.on("mouseout",()=>ln.setStyle({opacity:.5,color:OR}));
   items.push(ln);
-  const i1=Math.floor(path.length*0.6),pa=path[i1],pb=path[Math.min(path.length-1,i1+2)];
-  const tri=odArrow(pa,pb,1,0.0055+0.004*Math.sqrt(tot/maxF));
+  var i1=Math.floor(path.length*0.6),pa=path[i1],pb=path[Math.min(path.length-1,i1+2)];
+  var tri=odArrow(pa,pb,1,0.0055+0.004*Math.sqrt(tot/maxF));
   items.push(L.polygon(tri,{color:"#fff",weight:1,fillColor:ACCENT,fillOpacity:.9,interactive:false}));
-  if(i<12){const mid=path[Math.floor(path.length/2)];
+  if(i<12){var mid=path[Math.floor(path.length/2)];
    items.push(L.marker(mid,{interactive:false,icon:L.divIcon({className:"od-flow-lbl",
     html:'<span style="font:600 10px Inter,sans-serif;color:#fff;background:'+OR+';padding:0 4px;border-radius:7px;white-space:nowrap;opacity:.92">'+fmtN(tot)+'</span>',iconSize:null})}));}
  });
- Object.keys(cen).forEach(c=>{const k=cls(c),col=COLC[k],rad=4+9*Math.sqrt(atr(c)/maxA);
-  const rol=k==="min"?"comuna dormitorio":k==="primary"?"polo principal":"subcentro";
-  items.push(L.circleMarker(cen[c],{radius:rad,color:"#fff",weight:1.2,fillColor:col,fillOpacity:.95})
-    .bindPopup('<b>'+titleCase(S.byCut[c].comuna)+'</b><br>Atrae: <b>'+fmtN(atr(c))+'</b> trabajadores de la región<br>Envía: <b>'+fmtN(gen(c))+'</b> a otras comunas<br>Balance: <b>'+(atr(c)-gen(c)>=0?"+":"")+fmtN(atr(c)-gen(c))+'</b> · '+rol));
-  items.push(L.marker(cen[c],{interactive:false,icon:L.divIcon({className:"od-lbl",
-   html:'<span style="font:'+(k==="min"?"500":"700")+' 10px Inter,sans-serif;color:'+(k==="min"?"#5b6b7b":col)+';background:rgba(255,255,255,.82);padding:1px 4px;border-radius:6px;white-space:nowrap">'+titleCase(S.byCut[c].comuna)+'</span>',iconSize:null})}));});
+ Object.keys(cen).forEach(function(id){var k=cls(id),col=COLC[k],rad=4+9*Math.sqrt(wt(id)/maxW);
+  var pop;
+  if(isMetro&&id===METRO)pop='<b>'+s.name+'</b> (área metropolitana)<br>Atrae: <b>'+fmtN(atr(id))+'</b> desde comunas externas<br>Envía: <b>'+fmtN(gen(id))+'</b> hacia comunas externas';
+  else if(isMetro)pop='<b>'+nodeName(id)+'</b><br>Envía al área: <b>'+fmtN(gen(id))+'</b><br>Recibe del área: <b>'+fmtN(atr(id))+'</b><br>'+(gen(id)>atr(id)?"Dormitorio del área metropolitana":"Atrae empleo del área metropolitana");
+  else{var rol=k==="min"?"comuna dormitorio":k==="primary"?"polo principal":"subcentro";
+   pop='<b>'+nodeName(id)+'</b><br>Atrae: <b>'+fmtN(atr(id))+'</b> trabajadores de la región<br>Envía: <b>'+fmtN(gen(id))+'</b> a otras comunas<br>Balance: <b>'+(atr(id)-gen(id)>=0?"+":"")+fmtN(atr(id)-gen(id))+'</b> · '+rol;}
+  items.push(L.circleMarker(cen[id],{radius:rad,color:"#fff",weight:1.2,fillColor:col,fillOpacity:.95}).bindPopup(pop));
+  items.push(L.marker(cen[id],{interactive:false,icon:L.divIcon({className:"od-lbl",
+   html:'<span style="font:'+(k==="min"?"500":"700")+' 10px Inter,sans-serif;color:'+(k==="min"?"#5b6b7b":col)+';background:rgba(255,255,255,.82);padding:1px 4px;border-radius:6px;white-space:nowrap">'+nodeName(id)+'</span>',iconSize:null})}));});
  mvRegLayer=L.layerGroup(items).addTo(mvRegMap);
  const b=L.latLngBounds(Object.values(cen));if(b.isValid())mvRegMap.fitBounds(b,{padding:[30,30]});
  setTimeout(()=>mvRegMap.invalidateSize(),60);
- // ranking de atracción (comunas con atr>0), color por clase
- const rk=ranked.filter(c=>atr(c)>0&&S.byCut[c]).slice(0,14);
- document.getElementById("mv-regrank-t").textContent="Comunas por trabajadores que atraen desde el resto de la región — "+(blk.nombre||"");
- if(mvC7)mvC7.destroy();
- mvC7=new Chart(document.getElementById("mv-c7"),{type:"bar",
-  data:{labels:rk.map(c=>titleCase(S.byCut[c].comuna)),datasets:[{data:rk.map(atr),backgroundColor:rk.map(c=>COLC[cls(c)])}]},
-  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
-    tooltip:{callbacks:{label:c=>{const cut=rk[c.dataIndex];const k=cls(cut);return fmtN(atr(cut))+" llegan · envía "+fmtN(gen(cut))+" · "+(k==="min"?"dormitorio":k==="primary"?"polo principal":"subcentro");}}}},
-   scales:{x:{title:{display:true,text:"ocupados que llegan desde otras comunas de la región"}}}}});
+ // ranking
+ if(isMetro){
+  var ext=idList.filter(id=>id!==METRO).map(id=>({id:id,ex:atr(id)+gen(id),atr:atr(id),gen:gen(id)}))
+    .filter(x=>x.ex>0).sort((a,b)=>b.ex-a.ex).slice(0,14);
+  document.getElementById("mv-regrank-t").textContent="Comunas externas más vinculadas con "+s.name+" (viajes de ida y vuelta)";
+  if(mvC7)mvC7.destroy();
+  mvC7=new Chart(document.getElementById("mv-c7"),{type:"bar",
+   data:{labels:ext.map(x=>nodeName(x.id)),datasets:[{data:ext.map(x=>x.ex),backgroundColor:ext.map(x=>x.gen>x.atr?GREY:ACCENT)}]},
+   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+     tooltip:{callbacks:{label:c=>{var x=ext[c.dataIndex];return "envía "+fmtN(x.gen)+" al área · recibe "+fmtN(x.atr)+" · total "+fmtN(x.ex);}}}},
+    scales:{x:{title:{display:true,text:"viajes al trabajo intercambiados con el área metropolitana"}}}}});
+ }else{
+  var rk=rankedAll.filter(c=>atr(c)>0&&S.byCut[c]).slice(0,14);
+  document.getElementById("mv-regrank-t").textContent="Comunas por trabajadores que atraen desde el resto de la región — "+(blk.nombre||"");
+  if(mvC7)mvC7.destroy();
+  mvC7=new Chart(document.getElementById("mv-c7"),{type:"bar",
+   data:{labels:rk.map(c=>titleCase(S.byCut[c].comuna)),datasets:[{data:rk.map(atr),backgroundColor:rk.map(c=>COLC[cls(c)])}]},
+   options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+     tooltip:{callbacks:{label:c=>{var cut=rk[c.dataIndex],k=cls(cut);return fmtN(atr(cut))+" llegan · envía "+fmtN(gen(cut))+" · "+(k==="min"?"dormitorio":k==="primary"?"polo principal":"subcentro");}}}},
+    scales:{x:{title:{display:true,text:"ocupados que llegan desde otras comunas de la región"}}}}});
+ }
 }
 function ensureMvMap(){if(mvMap)return;
  mvMap=L.map("mv-map",{preferCanvas:true}).setView([-36.86,-73.03],11);mapChrome(mvMap);}
