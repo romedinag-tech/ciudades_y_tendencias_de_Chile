@@ -1404,7 +1404,23 @@ function nmapDraw(){ensureNMap();const k=NMAP.key,m=KPI[k],cols=R[m.ramp];
  NMAP.legend.addTo(NMAP.map);
  document.getElementById("n-desc").innerHTML="<b>"+m.lbl+"</b>"+(m.u?" ("+m.u+")":"");
  setTimeout(()=>NMAP.map.invalidateSize(),60);}
-function renderNmap(){nmapBuildSel();nmapDraw();}
+function renderNationalKpis(){const box=document.getElementById("n-kpis");if(!box)return;
+ const A=S.natAgg;
+ const card=(val,lbl,sub)=>'<div class="kpi"><div class="v">'+val+'</div><div class="l">'+lbl+'</div>'+(sub?'<div class="s" style="color:'+GREY+'">'+sub+'</div>':'')+'</div>';
+ const pct=k=>A[k]!=null?fmt(A[k],1)+"%":"s/d";
+ const cards=[
+  card(A.pob_2024!=null?fmt(A.pob_2024,0):"s/d","Población 2024","Censo INE"),
+  card(String(S.kpis.length),"Comunas",Object.keys(S.metros).length+" áreas metropolitanas"),
+  card(A.var_pct!=null?(A.var_pct>=0?"+":"")+fmt(A.var_pct,1)+"%":"s/d","Crecimiento 2017→2024","intercensal"),
+  card(A.escol!=null?fmt(A.escol,1):"s/d","Escolaridad promedio (18+)","años"),
+  card(pct("pct_internet"),"Viviendas con internet",""),
+  card(pct("pct_terciaria"),"Educación terciaria (18+)",""),
+  card(pct("pct_arriendo"),"Hogares arrendatarios",""),
+  card(A.casen_ing_pc!=null?"$"+fmt(A.casen_ing_pc,0):"s/d","Ingreso per cápita (mediana)","CASEN 2024"),
+  card(pct("casen_pobreza_pct"),"Pobreza por ingresos","CASEN 2024")
+ ];
+ box.innerHTML='<div class="kpis">'+cards.join("")+'</div>';}
+function renderNmap(){renderNationalKpis();nmapBuildSel();nmapDraw();}
 
 /* =================================================================
    TAB 5 · RANKING NACIONAL
@@ -1562,8 +1578,10 @@ function writeURL(){try{const c=cityParam(),t=currentTab();const q=new URLSearch
 function applyURL(){const q=new URLSearchParams(location.search);const c=q.get("c"),t=q.get("t");let ok=false;
  if(c){ if(S.byCut[c]){selectComuna(c);ok=true;}
    else {const mn=Object.keys(S.metros).find(n=>slugify(n)===c); if(mn){selectMetro(mn);ok=true;}} }
- if(!ok)selectMetro("Gran Concepción");
+ if(!ok)selectMetro("Gran Concepción");            // selección de fondo para las pestañas por ciudad
  if(t&&document.getElementById("p-"+t))activateTab(t);
+ else if(ok)activateTab("resumen");                // enlace a una ciudad sin pestaña → su ficha
+ else activateTab("mapa");                          // sin parámetros → portada nacional (Chile)
 }
 // ---- pestañas de tendencias embebidas: ancladas al menú de ciudades ----
 function lazyFrame(id){const f=document.getElementById(id);if(!f)return;
