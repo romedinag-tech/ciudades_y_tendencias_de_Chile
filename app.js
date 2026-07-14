@@ -172,7 +172,7 @@ Promise.all([
  // estadísticas nacionales (promedio del país agregando todas las comunas, y mediana entre comunas)
  Object.keys(KPI).forEach(k=>{S.natAgg[k]=aggregate(S.kpis,k);S.natMed[k]=median(S.kpis.map(r=>num(r[k])));});
  const nSii=S.kpis.filter(r=>num(r.m2_total)!=null).length;
- document.getElementById("htag").textContent=S.kpis.length+" comunas · "+Object.keys(S.metros).length+" áreas metropolitanas · "+nSii+" con catastro SII";
+ var _ht=document.getElementById("htag");if(_ht)_ht.textContent=S.kpis.length+" comunas · "+Object.keys(S.metros).length+" áreas metropolitanas · "+nSii+" con catastro SII";
  document.getElementById("nt-sii").textContent=nSii;
  buildSelector(); buildComparador(); buildRegionNav(); buildRanking();
  // cobertura zonal (no bloquea; sólo para la nota de comunas omitidas)
