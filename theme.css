@@ -1,62 +1,63 @@
-/* Tema OSCURO institucional sobrio (scoped a html.dark). Navy profundo, azul legible,
-   sin neón. Consume/redefine los tokens de tokens.css. Solo presentación. */
+/* Tema OSCURO — paleta "Panorama Electoral" (near-black + acento naranja).
+   Scoped a html.dark. Consume/redefine los tokens de tokens.css. Solo presentación.
+   Los números (KPI) van en blanco; el naranja es acento (activos, bordes, eyebrows). */
 html.dark{
-  /* superficies oscuras */
-  --paper:#0D1E33; --bg:#0D1E33; --surface:#14263D; --surface-alt:#1B3350;
-  --panel:#14263D; --panel2:#1B3350;
-  --line:#26405F; --line-2:#2E4A6B;
-  /* tinta */
-  --ink:#E7EDF5; --ink-mid:#9DB0C7; --ink-lo:#7C8FAB; --mut:#9DB0C7; --mut-2:#7C8FAB;
-  /* marca / interacción (azul institucional legible sobre oscuro, AA) */
-  --navy:#4C93F5; --navy2:#6BA3E8; --accent:#4C93F5; --focus:#6BA3E8;
-  --cyan:#6BA3E8; --neural:#2E6FD6;
+  /* superficies casi negras */
+  --paper:#0a0d13; --bg:#0a0d13; --surface:#151c27; --surface-alt:#1a212c;
+  --panel:#151c27; --panel2:#1a212c;
+  --line:#232c3a; --line-2:#2b3547;
+  /* tinta neutra */
+  --ink:#e9eef5; --ink-mid:#8a93a5; --ink-lo:#6b7382; --mut:#8a93a5; --mut-2:#6b7382;
+  /* marca / interacción — acento naranja */
+  --navy:#ff6a1a; --navy2:#ff9d2f; --accent:#ff6a1a; --focus:#ff9d2f;
+  --cyan:#ff9d2f; --neural:#c2521a;
   /* acentos de dato (mudos) */
-  --or:#E0955F; --teal:#5FA9A0; --green:#5FB98F; --greenfx:#5FB98F; --red:#F08A82;
-  --grad:linear-gradient(135deg,#16365A 0%,#2E6FD6 100%);
+  --or:#ff9d2f; --teal:#5FA9A0; --green:#5FB98F; --greenfx:#5FB98F; --red:#F08A82;
+  --grad:linear-gradient(135deg,#c2521a 0%,#ff6a1a 100%);
 }
 html.dark{scroll-behavior:smooth}
 html.dark body{font-family:var(--font-ui) !important;
   background:var(--bg) !important; color:var(--ink) !important; background-image:none !important;}
-html.dark h1, html.dark h2, html.dark h3, html.dark h4{color:#F4F8FF !important; letter-spacing:-.01em}
-html.dark a{color:var(--cyan)}
-html.dark header{background:linear-gradient(135deg,#0D1E33 0%,#14263D 100%) !important;border-bottom:1px solid var(--line)}
-html.dark .warn{background:var(--surface-alt) !important;color:#DCE6F4 !important;border-bottom:1px solid var(--line)}
-html.dark .warn a{color:var(--cyan) !important;text-decoration:underline}
-html.dark .nav{background:#0B1A2C !important;border-bottom:1px solid var(--line)}
-html.dark .nav a{color:#A9BEDA !important}
+html.dark h1, html.dark h2, html.dark h3, html.dark h4{color:#F4F6FA !important; letter-spacing:-.01em}
+html.dark a{color:var(--accent)}
+html.dark header{background:linear-gradient(135deg,#0a0d13 0%,#151c27 100%) !important;border-bottom:1px solid var(--line)}
+html.dark .warn{background:var(--surface-alt) !important;color:#d4dae3 !important;border-bottom:1px solid var(--line)}
+html.dark .warn a{color:var(--accent) !important;text-decoration:underline}
+html.dark .nav{background:#0b0e15 !important;border-bottom:1px solid var(--line)}
+html.dark .nav a{color:#9aa3b3 !important}
 html.dark .nav a.on{background:var(--panel) !important;color:#fff !important;border-bottom-color:var(--accent) !important}
-html.dark .tag, html.dark .selbar{background:rgba(76,147,245,.10) !important;border:1px solid var(--line) !important}
+html.dark .tag, html.dark .selbar{background:rgba(255,106,26,.10) !important;border:1px solid var(--line) !important}
 html.dark .tabs{background:var(--bg) !important;border-bottom:1px solid var(--line)}
 html.dark .tabs button{color:var(--mut)}
 html.dark .tabs button.on{color:var(--accent) !important;border-bottom-color:var(--accent) !important}
 html.dark .tabs button:hover{color:#fff}
 html.dark .sidebar{background:var(--panel) !important;border-right:1px solid var(--line)}
 html.dark .rn-region, html.dark .rn-region+ .rn-region{border-bottom:1px solid var(--line)}
-html.dark .rn-head{color:#CFDCEF !important}
+html.dark .rn-head{color:#c9d1dc !important}
 html.dark .rn-head:hover, html.dark .rn-comunas button:hover{background:var(--panel2) !important}
 html.dark .rn-head .cnt{background:var(--panel2) !important;color:var(--mut) !important}
 html.dark .rn-region.open>.rn-head{color:var(--accent) !important}
-html.dark .rn-comunas button{color:#CFDCEF !important}
+html.dark .rn-comunas button{color:#c9d1dc !important}
 html.dark .rn-comunas button.on{background:var(--neural) !important;color:#fff !important}
 html.dark .kpi, html.dark .chartbox, html.dark .panelctrl, html.dark .cmp-pick, html.dark .tablewrap, html.dark .box, html.dark .empty, html.dark #cbox, html.dark #clist, html.dark .addrow input, html.dark .addrow #alist, html.dark .kpisel, html.dark .panelctrl select, html.dark .seg, html.dark .seg button, html.dark #evoPop, html.dark .cmp-pick input{background:var(--panel) !important;color:var(--ink) !important;border-color:var(--line) !important;
   box-shadow:none !important;}
-html.dark .kpi, html.dark .chartbox, html.dark .box{box-shadow:0 12px 34px rgba(0,0,0,.28) !important}
+html.dark .kpi, html.dark .chartbox, html.dark .box{box-shadow:0 12px 34px rgba(0,0,0,.40) !important}
 html.dark .card{background:var(--panel) !important;border-color:var(--line) !important}
-html.dark .card:hover{border-color:var(--accent) !important;box-shadow:0 12px 34px rgba(0,0,0,.34) !important}
+html.dark .card:hover{border-color:var(--accent) !important;box-shadow:0 12px 34px rgba(0,0,0,.46) !important}
 html.dark input, html.dark select, html.dark textarea{background:var(--panel) !important;color:var(--ink) !important;border-color:var(--line) !important}
-html.dark ::placeholder{color:#778CAB !important}
+html.dark ::placeholder{color:#6b7382 !important}
 html.dark #cbox{font-weight:600}
 html.dark #clist .opt:hover, html.dark #clist .opt.hi, html.dark .addrow #alist .opt:hover, html.dark .addrow #alist .opt.hi{background:var(--panel2) !important}
 html.dark #clist .grouphd{background:var(--panel2) !important;color:var(--mut) !important}
-html.dark .kpi .v{color:var(--cyan) !important}
+html.dark .kpi .v{color:#F4F6FA !important}
 html.dark .kpi .v.or{color:var(--greenfx) !important}
 html.dark .kpi .l, html.dark .lead, html.dark .panelctrl label, html.dark .chartbox p{color:var(--mut) !important}
-html.dark .kpi .s{color:var(--cyan) !important}
+html.dark .kpi .s{color:var(--mut) !important}
 html.dark h2 .bar, html.dark .grp-hd{border-color:var(--accent) !important}
 html.dark h2 .bar{background:var(--grad) !important}
 html.dark .grp-hd{color:#fff !important}
 html.dark .seg button.on, html.dark .ctrl button.on{background:var(--neural) !important;color:#fff !important}
-html.dark .ctrl button{background:var(--panel) !important;color:var(--cyan) !important;border:1px solid var(--line) !important}
+html.dark .ctrl button{background:var(--panel) !important;color:var(--accent) !important;border:1px solid var(--line) !important}
 html.dark .chip{background:var(--neural) !important;color:#fff !important}
 html.dark table{color:var(--ink)}
 html.dark th, html.dark td{border-bottom:1px solid var(--line) !important}
@@ -66,21 +67,21 @@ html.dark tbody tr:hover td, html.dark tbody tr:hover td:first-child{background:
 html.dark td.best{color:var(--greenfx) !important}
 html.dark td.worst{color:var(--red) !important}
 html.dark td.pos{color:var(--greenfx) !important}
-html.dark .map, html.dark #map, html.dark #zmap, html.dark .tendframe{border:1px solid var(--line) !important;background:#0D1E33 !important}
+html.dark .map, html.dark #map, html.dark #zmap, html.dark .tendframe{border:1px solid var(--line) !important;background:#0a0d13 !important}
 html.dark .tendframe{background:transparent !important}
-html.dark .leaflet-container{background:#08182B !important}
-html.dark .legend, html.dark .info{background:var(--panel) !important;color:var(--ink) !important;box-shadow:0 10px 30px rgba(0,0,0,.45) !important}
-html.dark .legend b, html.dark .info b{color:var(--cyan) !important}
-html.dark .note{background:var(--panel2) !important;border:1px solid var(--line) !important;border-left:4px solid var(--accent) !important;color:#CFDCEF !important}
+html.dark .leaflet-container{background:#06090e !important}
+html.dark .legend, html.dark .info{background:var(--panel) !important;color:var(--ink) !important;box-shadow:0 10px 30px rgba(0,0,0,.55) !important}
+html.dark .legend b, html.dark .info b{color:var(--accent) !important}
+html.dark .note{background:var(--panel2) !important;border:1px solid var(--line) !important;border-left:4px solid var(--accent) !important;color:#c9d1dc !important}
 html.dark footer{color:var(--mut) !important;border-top:1px solid var(--line) !important}
-html.dark #evoPop h4{color:var(--cyan) !important}
-html.dark .uname{border-bottom-color:var(--line) !important;color:#CFDCEF !important}
+html.dark #evoPop h4{color:var(--accent) !important}
+html.dark .uname{border-bottom-color:var(--line) !important;color:#c9d1dc !important}
 /* controles y elementos nuevos en oscuro */
-html.dark .leaflet-bar a,html.dark .leaflet-control-layers,html.dark .leaflet-control-layers-toggle{background:var(--panel2) !important;color:#DBE8FB !important;border-color:var(--line) !important}
-html.dark .fs-ctrl a{color:#DBE8FB}
-html.dark .author-wm{background:rgba(13,30,51,.85) !important;color:#BCCFE8 !important}
-html.dark .sharebtn{background:rgba(76,147,245,.16) !important;border-color:rgba(76,147,245,.32) !important}
-html.dark .foot-src{color:#7E92B2 !important}
-html.dark .tabs button .ti{color:#778CAB}
+html.dark .leaflet-bar a,html.dark .leaflet-control-layers,html.dark .leaflet-control-layers-toggle{background:var(--panel2) !important;color:#d4dae3 !important;border-color:var(--line) !important}
+html.dark .fs-ctrl a{color:#d4dae3}
+html.dark .author-wm{background:rgba(10,13,19,.85) !important;color:#b7bec9 !important}
+html.dark .sharebtn{background:rgba(255,106,26,.16) !important;border-color:rgba(255,106,26,.34) !important}
+html.dark .foot-src{color:#6b7382 !important}
+html.dark .tabs button .ti{color:#6b7382}
 html.dark .tabs button.on .ti,html.dark .tabs button:hover .ti{color:var(--accent)}
-html.dark .skel{background:#1B3350}
+html.dark .skel{background:#1a212c}

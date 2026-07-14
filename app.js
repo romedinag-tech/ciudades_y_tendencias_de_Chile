@@ -4,8 +4,10 @@
    Mapas zonales / dinámica por comuna: lazy-load data/zonas|intercensal|crecimiento/<slug>.(geo)json
    =================================================================== */
 const cssv=n=>(getComputedStyle(document.documentElement).getPropertyValue(n)||"").trim();
-const NAVY=cssv('--navy')||"#16365a",NAVY2=cssv('--navy2')||"#21507F",OR=cssv('--or')||"#C55A11",TEAL=cssv('--teal')||"#3F8E86",GREEN=cssv('--green')||"#2E8B57",RED=cssv('--red')||"#B2182B",GREY=cssv('--mut-2')||"#7C8AA0";
-const ACCENT=cssv('--accent')||"#1F6FEB";
+// colores de acento: `let` para poder re-leerlos al cambiar de tema (claro↔oscuro)
+let NAVY=cssv('--navy')||"#16365a",NAVY2=cssv('--navy2')||"#21507F",OR=cssv('--or')||"#C55A11",TEAL=cssv('--teal')||"#3F8E86",GREEN=cssv('--green')||"#2E8B57",RED=cssv('--red')||"#B2182B",GREY=cssv('--mut-2')||"#7C8AA0";
+let ACCENT=cssv('--accent')||"#1F6FEB";
+function reReadAccents(){NAVY=cssv('--navy')||NAVY;NAVY2=cssv('--navy2')||NAVY2;OR=cssv('--or')||OR;TEAL=cssv('--teal')||TEAL;GREEN=cssv('--green')||GREEN;RED=cssv('--red')||RED;GREY=cssv('--mut-2')||GREY;ACCENT=cssv('--accent')||ACCENT;}
 const CAT=['--cat-1','--cat-2','--cat-3','--cat-4','--cat-5','--cat-6'].map(cssv).filter(Boolean);
 const SEQ=['--seq-1','--seq-2','--seq-3','--seq-4','--seq-5'].map(cssv).filter(Boolean);
 Chart.defaults.font.family=cssv('--font-ui')||"Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
@@ -350,7 +352,7 @@ const CARTO_DARK="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
 const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
-function applyChartTheme(){if(!window.Chart)return;Chart.defaults.color=cssv('--ink-mid');Chart.defaults.borderColor=cssv('--line');var t=Chart.defaults.plugins.tooltip;t.backgroundColor=cssv('--surface');t.titleColor=cssv('--ink');t.bodyColor=cssv('--ink-mid');t.borderColor=cssv('--line');}
+function applyChartTheme(){if(!window.Chart)return;reReadAccents();Chart.defaults.color=cssv('--ink-mid');Chart.defaults.borderColor=cssv('--line');var t=Chart.defaults.plugins.tooltip;t.backgroundColor=cssv('--surface');t.titleColor=cssv('--ink');t.bodyColor=cssv('--ink-mid');t.borderColor=cssv('--line');}
 function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mapa"){renderNmap();}else if(t==="movilidad"){renderMovilidad();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
 function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
