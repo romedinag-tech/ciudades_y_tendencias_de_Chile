@@ -156,9 +156,9 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=4"),
+ getJSON("data/kpis_comunas.json?v=10"),
  getJSON("data/metro_areas.json"),
- getJSON("data/comunas.geojson?v=2"),
+ getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
  getJSON("data/crecimiento_index.json").catch(()=>({slugs:[]})),
  getJSON("data/ranking_growth.json").catch(()=>({})),
@@ -169,6 +169,9 @@ Promise.all([
  (ci.slugs||[]).forEach(s=>HAS_CREC[s]=1);
  (ii.slugs||[]).forEach(s=>HAS_ZONAL_INTER[s]=1);
  S.kpis.forEach(r=>S.byCut[r.cut]=r);
+ // el módulo de mercado se resuelve ANTES de construir la UI: registra (o no) sus indicadores
+ // y fusiona sus valores en las comunas, de modo que selector, comparador y ranking ya los vean.
+ return initMercado().then(()=>{
  // estadísticas nacionales (promedio del país agregando todas las comunas, y mediana entre comunas)
  Object.keys(KPI).forEach(k=>{S.natAgg[k]=aggregate(S.kpis,k);S.natMed[k]=median(S.kpis.map(r=>num(r[k])));});
  const nSii=S.kpis.filter(r=>num(r.m2_total)!=null).length;
@@ -179,6 +182,7 @@ Promise.all([
  getJSON("data/zonas_cobertura.json").then(c=>{ZCOV=c;}).catch(()=>{});
  // selección inicial desde la URL (enlace compartido) o Gran Concepción por defecto
  applyURL();
+ });
 }).catch(e=>{document.body.insertAdjacentHTML("afterbegin",
  '<div class="loading">No se pudieron cargar los datos: '+e+'</div>');});
 
@@ -286,6 +290,7 @@ function finishSelect(){
  const t=currentTab();
  if(t==="ranking")drawRanking();
  else if(t==="economia")renderEconomia();
+ else if(t==="mercado")renderMercado();
  else if(t==="movilidad")renderMovilidad();
  else if(t==="mapa")renderNmap();
  syncTendCity();   // tendencias embebidas siguen la ciudad seleccionada
@@ -353,7 +358,7 @@ const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
 function applyChartTheme(){if(!window.Chart)return;reReadAccents();Chart.defaults.color=cssv('--ink-mid');Chart.defaults.borderColor=cssv('--line');var t=Chart.defaults.plugins.tooltip;t.backgroundColor=cssv('--surface');t.titleColor=cssv('--ink');t.bodyColor=cssv('--ink-mid');t.borderColor=cssv('--line');}
-function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mapa"){renderNmap();}else if(t==="movilidad"){renderMovilidad();}}
+function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mercado"){renderMercado();}else if(t==="mapa"){renderNmap();}else if(t==="movilidad"){renderMovilidad();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
 function setTheme(dark){document.documentElement.classList.toggle("dark",dark);try{localStorage.setItem("theme",dark?"dark":"light");}catch(e){}updateThemeIcon();applyChartTheme();applyMapTheme();rerenderActive();postTheme();}
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
@@ -459,7 +464,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -561,7 +566,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -667,7 +672,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -686,6 +691,220 @@ function ecoProj(series,t){const ys=series.filter(v=>v>0);if(ys.length<3)return{
  const r=ys.slice(-4);let g=Math.pow(r[r.length-1]/r[0],1/(r.length-1));g=Math.min(Math.max(g,0.99),1.06);
  let last=ys[ys.length-1],y=+t[t.length-1].slice(0,4),s=+t[t.length-1].slice(-1);
  const pt=[],pv=[];for(let k=0;k<2;k++){s++;if(s>2){s=1;y++;}last=Math.round(last*g);pt.push(y+"-S"+s);pv.push(last);}return{pt,pv};}
+/* ================= MERCADO INMOBILIARIO — compraventas SII F2890 =================
+   MÓDULO OPCIONAL. Se enciende con data/site.json → {"modulos":{"mercado":true}}.
+   El sitio público (ciudades_y_tendencias_de_Chile) lo lleva APAGADO y además no recibe
+   ninguna copia de data/mercado/. El dashboard inmobiliario lo lleva encendido.
+   Una sola base de código: cualquier mejora al uso de suelo sirve a los dos sitios. */
+let mktLoaded=false,mktC1=null,mktC2=null,mktC3=null,mktC4=null,mktOn=false;
+const KPI_MERCADO={
+ mkt_ops:{lbl:"Compraventas 2015-2025",grp:"Mercado inmobiliario (SII F2890)",u:"operaciones",dec:0,agg:"sum",sii:true,ramp:"BuPu",log:true},
+ mkt_uf_med:{lbl:"Precio mediano de vivienda",grp:"Mercado inmobiliario (SII F2890)",u:"UF",dec:0,agg:"wmean",wt:"mkt_ops",sii:true,ramp:"YlOrRd",log:true},
+ mkt_ufm2:{lbl:"Precio mediano por m² construido",grp:"Mercado inmobiliario (SII F2890)",u:"UF/m²",dec:1,agg:"wmean",wt:"mkt_ops",sii:true,ramp:"YlOrRd",log:false},
+ mkt_brecha:{lbl:"Brecha mercado ÷ avalúo fiscal",grp:"Mercado inmobiliario (SII F2890)",u:"veces",dec:2,agg:"wmean",wt:"mkt_ops",sii:true,ramp:"PuRd",log:false}};
+function quitarMercado(){
+ // el análisis del Metro también vive del dato de mercado: se va con él
+ ["mercado","metro-gs"].forEach(t=>{
+   const b=document.querySelector('button[data-tab="'+t+'"]');if(b)b.remove();
+   const p=document.getElementById("p-"+t);if(p)p.remove();});}
+// Los indicadores de mercado se REGISTRAN sólo con el módulo encendido: si no, aparecerían
+// vacíos en Comparar/Ranking/mapa nacional del sitio público.
+function initMercado(){
+ return getJSON("data/site.json?v=2").then(cfg=>{
+   mktOn=!!(cfg&&cfg.modulos&&cfg.modulos.mercado);
+   if(!mktOn){quitarMercado();return;}
+   Object.assign(KPI,KPI_MERCADO);
+   // toggle del mapa zonal: precio ↔ plusvalía
+   document.querySelectorAll("#mkt-mapvar button").forEach(b=>b.onclick=()=>{
+     mktMapVar=b.dataset.mv;
+     document.querySelectorAll("#mkt-mapvar button").forEach(x=>{const on=x===b;
+       x.classList.toggle("on",on);x.setAttribute("aria-selected",on?"true":"false");});
+     drawMktMap(dataSlug());});
+   return Promise.all([
+     getJSON("data/mercado/kpis_mercado.json?v=2").then(k=>{
+       (S.kpis||[]).forEach(c=>{const m=k[String(c.cut)];if(m)Object.assign(c,m);});}),
+     // el índice no bloquea el módulo: si falta, la pestaña funciona sin ese gráfico
+     getJSON("data/mercado/repeat_sales.json?v=2").then(d=>{S.rs=d;}).catch(()=>{S.rs=null;})
+   ]);
+ }).catch(()=>{mktOn=false;quitarMercado();});}
+const MKT_ANIOS=["2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"];
+// Las medianas no se suman. Para agregar comunas a un área metropolitana se pondera cada
+// mediana por su número de operaciones: es una aproximación (la mediana del conjunto no es
+// el promedio de las medianas), pero conserva el orden de magnitud y evita que una comuna
+// con 40 ventas pese lo mismo que una con 40.000.
+function mktW(recs,pick,peso){let sw=0,s=0;recs.forEach(r=>{const v=pick(r),w=peso(r);
+  if(v!=null&&w>0){s+=v*w;sw+=w;}});return sw>0?s/sw:null;}
+function mktData(){const s=S.sel;if(!s||!S.mkt)return null;
+ const cuts=s.type==="comuna"?[String(s.key)]:(S.metros[s.key]||[]).map(String);
+ const recs=cuts.map(c=>S.mkt[c]).filter(Boolean);if(!recs.length)return null;
+ const ops=recs.reduce((a,r)=>a+(r.ops||0),0);
+ const w=f=>mktW(recs,f,r=>r.ops||0);
+ const serie=MKT_ANIOS.map(a=>{const rs=recs.map(r=>(r.serie||{})[a]).filter(Boolean);
+   return {anio:a,n:rs.reduce((x,r)=>x+r.n,0),
+           uf:mktW(rs,r=>r.uf,r=>r.n),ufm2:mktW(rs,r=>r.ufm2,r=>r.n)};});
+ const acum={};recs.forEach(r=>Object.entries(r.tipos||{}).forEach(([t,v])=>{(acum[t]=acum[t]||[]).push(v);}));
+ const porTipo=Object.entries(acum).map(([t,arr])=>({tipo:t,n:arr.reduce((a,r)=>a+r.n,0),
+     uf:mktW(arr,r=>r.uf,r=>r.n),ufm2:mktW(arr,r=>r.ufm2,r=>r.n)}))
+   .filter(x=>x.ufm2!=null).sort((a,b)=>b.ufm2-a.ufm2);
+ return {ops,uf:w(r=>r.uf_med),ufm2:w(r=>r.ufm2),brecha:w(r=>r.brecha),serie,porTipo};}
+function renderMercado(){
+ if(!mktLoaded){getJSON("data/mercado/comunas.json?v=2").then(d=>{S.mkt=d.comunas||{};S.mktMeta=d.meta;
+     mktLoaded=true;drawMkt();})
+   .catch(()=>{document.getElementById("mkt-kpis").innerHTML='<div class="note">Datos de mercado no disponibles.</div>';});return;}
+ drawMkt();}
+function drawMkt(){const d=mktData();
+ const kp=document.getElementById("mkt-kpis");
+ document.getElementById("mkt-title").firstChild.textContent="Mercado inmobiliario: precios de compraventa — "+(S.sel?S.sel.name:"");
+ if(!d||!d.ops){kp.innerHTML='<div class="note">Sin compraventas suficientes para esta selección (se exigen al menos 30 operaciones).</div>';
+   [mktC1,mktC2,mktC3,mktC4].forEach(c=>c&&c.destroy());mktC1=mktC2=mktC3=mktC4=null;return;}
+ // plusvalía REAL: la UF ya descuenta inflación, así que la variación del UF/m² es apreciación real
+ const con=d.serie.filter(x=>x.ufm2!=null);
+ const v0=con.length?con[0]:null,v1=con.length?con[con.length-1]:null;
+ const plus=(v0&&v1&&v0.ufm2>0)?100*(v1.ufm2-v0.ufm2)/v0.ufm2:null;
+ const card=(v,l,s,col)=>'<div class="kpi"><div class="v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';
+ kp.innerHTML='<div class="kpis">'+
+   card(fmtN(Math.round(d.uf))+" UF","Precio mediano de vivienda","casa, condominio y departamento")+
+   card(fmt(d.ufm2,1)+" UF/m²","Precio por m² construido","mediana de la vivienda")+
+   card(plus==null?"—":((plus>=0?"+":"")+fmt(plus,1)+"%"),"Plusvalía real del m²",
+        v0&&v1?(v0.anio+" → "+v1.anio+" · ya descontada la inflación"):"",plus>=0?GREEN:RED)+
+   card(fmtN(d.ops),"Compraventas inscritas","2015-2025")+
+   card(fmt(d.brecha,2)+"×","Mercado ÷ avalúo fiscal","cuántas veces el avalúo se paga en el mercado")+'</div>';
+ const labs=d.serie.map(x=>x.anio);
+ if(mktC1)mktC1.destroy();
+ mktC1=new Chart(document.getElementById("mkt-c1"),{type:"line",data:{labels:labs,datasets:[
+   {label:"Precio mediano",data:d.serie.map(x=>x.uf==null?null:Math.round(x.uf)),
+    borderColor:NAVY,backgroundColor:NAVY,tension:.2,pointRadius:3,borderWidth:3,spanGaps:true}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>fmtN(c.parsed.y)+" UF"}}},
+   scales:{y:{title:{display:true,text:"UF"},ticks:{callback:v=>fmtN(v)}}}}});
+ if(mktC2)mktC2.destroy();
+ mktC2=new Chart(document.getElementById("mkt-c2"),{type:"line",data:{labels:labs,datasets:[
+   {label:"UF por m²",data:d.serie.map(x=>x.ufm2==null?null:+x.ufm2.toFixed(2)),
+    borderColor:OR,backgroundColor:OR,tension:.2,pointRadius:3,borderWidth:3,spanGaps:true}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>fmt(c.parsed.y,2)+" UF/m²"}}},
+   scales:{y:{title:{display:true,text:"UF/m²"}}}}});
+ if(mktC3)mktC3.destroy();
+ mktC3=new Chart(document.getElementById("mkt-c3"),{type:"bar",data:{labels:d.porTipo.map(x=>x.tipo),
+   datasets:[{label:"UF/m²",data:d.porTipo.map(x=>+x.ufm2.toFixed(2)),backgroundColor:TEAL}]},
+  options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>fmt(c.parsed.x,2)+" UF/m² · "+fmtN(d.porTipo[c.dataIndex].n)+" operaciones"}}},
+   scales:{x:{title:{display:true,text:"UF/m²"}}}}});
+ if(mktC4)mktC4.destroy();
+ mktC4=new Chart(document.getElementById("mkt-c4"),{type:"bar",data:{labels:labs,datasets:[
+   {label:"Compraventas",data:d.serie.map(x=>x.n||null),backgroundColor:NAVY2}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>fmtN(c.parsed.y)+" operaciones"}}},
+   scales:{y:{title:{display:true,text:"operaciones"},ticks:{callback:v=>fmtN(v)}}}}});
+ drawMktMap(dataSlug());
+ drawRepeatSales();
+}
+
+/* ── índice repeat-sales: la selección contra el país ──────────────────────────
+   Un área metropolitana no tiene índice propio: cada comuna se estima por separado.
+   Se promedian sus índices ponderando por número de pares, que es la precisión
+   relativa de cada uno — no por población, que aquí no dice nada. */
+let mktC5=null;
+function drawRepeatSales(){const box=document.getElementById("mkt-rsbox");
+ if(!S.rs){box.style.display="none";return;}
+ const anios=S.rs.meta.anios.map(String), nac=S.rs.nacional, s=S.sel;
+ const cuts=!s?[]:(s.type==="comuna"?[String(s.key)]:(S.metros[s.key]||[]).map(String));
+ const recs=cuts.map(c=>S.rs.comunas[c]).filter(Boolean);
+ let local=null,npares=0;
+ if(recs.length){
+   npares=recs.reduce((a,r)=>a+r.n,0);
+   local=anios.map(a=>{let sw=0,sv=0;
+     recs.forEach(r=>{const v=r.indice[a];if(v!=null){sv+=v*r.n;sw+=r.n;}});
+     return sw>0?+(sv/sw).toFixed(1):null;});
+ }
+ box.style.display="";
+ const nota=document.getElementById("mkt-rsnote");
+ const fin=anios[anios.length-1];
+ if(local){
+   const vl=local[local.length-1], vn=nac[fin];
+   const dif=vl-vn;
+   nota.innerHTML="<b>"+(s.name||"")+"</b>: "+(vl>=100?"+":"")+fmt(vl-100,1)+"% real desde "+anios[0]+
+     " · país "+(vn>=100?"+":"")+fmt(vn-100,1)+"%. "+
+     (Math.abs(dif)<2?"Se movió prácticamente igual que el promedio nacional."
+       :(dif>0?"Se apreció <b>"+fmt(dif,1)+" puntos MÁS</b> que el país."
+              :"Se apreció <b>"+fmt(-dif,1)+" puntos MENOS</b> que el país."))+
+     " Estimado con "+fmtN(npares)+" pares de ventas repetidas"+
+     (recs.length<cuts.length?" ("+recs.length+" de "+cuts.length+" comunas con masa suficiente)":"")+".";
+ } else {
+   nota.innerHTML="Esta selección no alcanza el mínimo de 100 pares de ventas repetidas para "+
+     "un índice propio; se muestra solo el nacional. Un índice con pocos pares es ruido, no señal.";
+ }
+ const ds=[{label:"Chile",data:anios.map(a=>nac[a]),borderColor:GREY,backgroundColor:GREY,
+            borderDash:[5,4],tension:.2,pointRadius:0,borderWidth:2}];
+ if(local)ds.unshift({label:s.name,data:local,borderColor:NAVY,backgroundColor:NAVY,
+            tension:.2,pointRadius:3,borderWidth:3,spanGaps:true});
+ if(mktC5)mktC5.destroy();
+ mktC5=new Chart(document.getElementById("mkt-c5"),{type:"line",data:{labels:anios,datasets:ds},
+  options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"},datalabels:{display:false},
+   tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.y,1)+
+     "  ("+(c.parsed.y>=100?"+":"")+fmt(c.parsed.y-100,1)+"% real)"}}},
+   scales:{y:{title:{display:true,text:"índice (2015 = 100, en UF)"}}}}});
+}
+
+/* ── mapa zonal de mercado (precio UF/m² · plusvalía real) ────────────────────── */
+let mktMap=null,mktLayer=null,mktLegend=null,mktMapVar="ufm2";
+function ensureMktMap(){if(mktMap)return;
+ mktMap=L.map("mkt-map",{preferCanvas:false}).setView([-36.86,-73.03],11);mapChrome(mktMap);}
+function drawMktMap(slug){const box=document.getElementById("mkt-mapbox");
+ if(!slug){box.style.display="none";return;}
+ S.mktZcache=S.mktZcache||{};
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const mzP=(slug in S.mktZcache)?Promise.resolve(S.mktZcache[slug]):getJSON("data/mercado/zonas/"+slug+".json?v=2").then(d=>{S.mktZcache[slug]=d;return d;}).catch(()=>{S.mktZcache[slug]=null;return null;});
+ Promise.all([geoP,mzP]).then(([gf,d])=>{
+  if(!d){box.style.display="none";return;}
+  box.style.display="";
+  const feats=gf.map(f=>{const za=String(f.properties.zona),z=d[za];
+    return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
+      n:z?z.n:null,uf:z?z.uf:null,ufm2:z?z.ufm2:null,plus:z?(z.plus!=null?z.plus:null):null,
+      plus_tipo:z?z.plus_tipo:null}};});
+  ensureMktMap();
+  if(mktLayer){mktMap.removeLayer(mktLayer);mktLayer=null;}
+  if(mktLegend){mktMap.removeControl(mktLegend);mktLegend=null;}
+  const esPlus=mktMapVar==="plus";
+  // plusvalía: rampa DIVERGENTE con cero neutro. Convención de precios: ROJO baja, gris ~0,
+  // VERDE sube (no reusar R.RdYlGn, que quedó reasignada a azul-rojo). Precio: secuencial YlOrRd.
+  const RAMPA_PLUS=["#c0392b","#e59866","#f2f2f2","#7dcea0","#1e8449"];
+  const cols=esPlus?RAMPA_PLUS:R.YlOrRd;
+  const vals=feats.map(f=>f.properties[mktMapVar]);
+  const brk=esPlus?[-10,0,20,45,80]:quant(vals.filter(v=>v!=null),false);
+  const colFor=esPlus
+    ? x=>x==null?"#d8dde3":(x<brk[0]?cols[0]:x<brk[1]?cols[1]:x<brk[2]?cols[2]:x<brk[3]?cols[3]:cols[4])
+    : x=>colorFor(x,brk,cols,false);
+  mktLayer=L.geoJSON({type:"FeatureCollection",features:feats},{
+   style:f=>({color:"#5b6b7b",weight:.5,fillColor:colFor(f.properties[mktMapVar]),fillOpacity:.82}),
+   onEachFeature:(f,l)=>{const p=f.properties;
+    l.on("mouseover",()=>l.setStyle({weight:2,color:"#1F6FEB"}));
+    l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
+    l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>'+
+      (p.n!=null?'':'sin operaciones suficientes')+
+      (p.ufm2!=null?'Precio: <b>'+fmt(p.ufm2,1)+' UF/m²</b><br>':'')+
+      (p.uf!=null?'Mediana: '+fmtN(p.uf)+' UF<br>':'')+
+      (p.plus!=null?'Plusvalía real: <b>'+(p.plus>=0?'+':'')+fmt(p.plus,1)+'%</b> ('+(p.plus_tipo||'')+')<br>':'')+
+      (p.n!=null?'<span class="mut">'+fmtN(p.n)+' operaciones</span>':''));}
+  }).addTo(mktMap);
+  if(mktLayer.getBounds().isValid())mktMap.fitBounds(mktLayer.getBounds(),{padding:[10,10]});
+  mktLegend=L.control({position:"bottomright"});
+  mktLegend.onAdd=()=>{const dd=L.DomUtil.create("div","legend");
+   let h;
+   if(esPlus){h='<b>Plusvalía real 2015-17 → 2023-25</b><br>'+
+     '<i style="background:'+cols[0]+'"></i>baja (&lt; '+brk[0]+'%)<br>'+
+     '<i style="background:'+cols[1]+'"></i>'+brk[0]+' – '+brk[1]+'%<br>'+
+     '<i style="background:'+cols[2]+'"></i>'+brk[1]+' – '+brk[2]+'%<br>'+
+     '<i style="background:'+cols[3]+'"></i>'+brk[2]+' – '+brk[3]+'%<br>'+
+     '<i style="background:'+cols[4]+'"></i>&gt; '+brk[3]+'%<br>';
+   }else{h='<b>Precio (UF/m² construido)</b><br><i style="background:'+cols[0]+'"></i>≤ '+fmt(brk[0],0)+'<br>';
+     for(let i=1;i<brk.length;i++)h+='<i style="background:'+cols[i]+'"></i>'+fmt(brk[i-1],0)+' – '+fmt(brk[i],0)+'<br>';
+     h+='<i style="background:'+cols[4]+'"></i>&gt; '+fmt(brk[4],0)+'<br>';}
+   h+='<i style="background:#d8dde3"></i>s/d';dd.innerHTML=h;return dd;};
+  mktLegend.addTo(mktMap);
+  setTimeout(()=>mktMap.invalidateSize(),60);
+ }).catch(()=>{box.style.display="none";});}
+
 function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
  if(s.type==="comuna"){const r=S.eco[s.key];return r?{t:r.t,avaluo:r.avaluo_mm,contrib:r.contrib_mm,npred:r.npred,proj_t:r.proj_t,proj:r.proj_avaluo_mm,members:[s.key]}:null;}
  const recs=(S.metros[s.key]||[]).map(c=>S.eco[c]).filter(Boolean);if(!recs.length)return null;
@@ -693,7 +912,7 @@ function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
  const av=sum("avaluo_mm"),ct=sum("contrib_mm"),np=sum("npred"),pj=ecoProj(av,t);
  return {t,avaluo:av,contrib:ct,npred:np,proj_t:pj.pt,proj:pj.pv,members:recs.map(r=>r.cut)};}
 function renderEconomia(){
- if(!ecoLoaded){getJSON("data/economia/comunas.json?v=5").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
+ if(!ecoLoaded){getJSON("data/economia/comunas.json?v=6").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
    .catch(()=>{document.getElementById("eco-kpis").innerHTML='<div class="note">Serie económica no disponible.</div>';});return;}
  drawEco();}
 function drawEco(){const d=ecoSeries();
@@ -756,8 +975,8 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
- const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=4").then(d=>{S.ecoZcache[slug]=d;return d;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=5").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
     return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
@@ -1039,7 +1258,7 @@ function regFillN(total){
 function regWireN(){const sel=document.getElementById("mv-regn");if(!sel||mvRegNWired)return;mvRegNWired=true;
  sel.onchange=()=>{mvRegN=+sel.value;if(S.odReg)regFlowMap();};}
 function renderRegOD(){const box=document.getElementById("mv-regbox");
- const loadR=S.odReg?Promise.resolve(S.odReg):getJSON("data/movilidad/od_regional.json?v=1").then(d=>{S.odReg=d;return d;});
+ const loadR=S.odReg?Promise.resolve(S.odReg):getJSON("data/movilidad/od_regional.json?v=2").then(d=>{S.odReg=d;return d;});
  const loadC=S.centros?Promise.resolve(S.centros):getJSON("data/movilidad/centros.json").then(d=>{S.centros=d;return d;}).catch(()=>({}));
  Promise.all([loadR,loadC]).then(()=>{regWireN();regFlowMap();}).catch(()=>{box.style.display="none";});}
 function regFlowMap(){const s=S.sel,box=document.getElementById("mv-regbox");
@@ -1162,7 +1381,7 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
  if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
  const sel=document.getElementById("mv-sel");sel.value=mvKey;
  sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=5").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=6").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  geoP.then(gf=>{
   if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
   box.style.display="";ensureMvMap();
@@ -1559,6 +1778,8 @@ function activateTab(t){
  if(t==="movilidad"){renderMovilidad();if(mvMap)setTimeout(()=>{mvMap.invalidateSize();if(mvLayer&&mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});},80);
   if(mvOdMap)setTimeout(()=>mvOdMap.invalidateSize(),100);}
  if(t==="economia"){renderEconomia();if(ecoMap)setTimeout(()=>{ecoMap.invalidateSize();if(ecoLayer&&ecoLayer.getBounds().isValid())ecoMap.fitBounds(ecoLayer.getBounds(),{padding:[10,10]});},80);}
+ if(t==="mercado"){renderMercado();if(mktMap)setTimeout(()=>{mktMap.invalidateSize();if(mktLayer&&mktLayer.getBounds().isValid())mktMap.fitBounds(mktLayer.getBounds(),{padding:[10,10]});},80);}
+ if(t==="metro-gs")lazyFrame("if-metro");
  if(t==="tend-demo")lazyFrame("if-demo");
  if(t==="tend-suelo")lazyFrame("if-suelo");
  writeURL();

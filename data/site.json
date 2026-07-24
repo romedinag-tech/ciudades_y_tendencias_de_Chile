@@ -1,0 +1,7 @@
+{
+  "sitio": "publico",
+  "modulos": {
+    "mercado": false
+  },
+  "nivel_mercado": "ninguno"
+}
