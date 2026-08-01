@@ -156,7 +156,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=10"),
+ getJSON("data/kpis_comunas.json?v=11"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
@@ -337,14 +337,41 @@ function renderResumen(){const s=S.sel;
    '<div class="l">Nivel socioeconómico (índice '+Math.round(nse.score)+'/100)</div>'+
    '<div class="s" style="color:'+NSE_COLORS[nse.nivel]+'">quintil de ingreso (CASEN 2024)</div></div>';}
  const casen=["casen_ing_pc","casen_pobreza_pct"];
+ // Procedencia del ingreso: la BASE es CASEN 2024 con factor comunal expc (oficial), pero el
+ // valor lleva un suavizado hacia una regresión censal donde la muestra comunal es chica.
+ // casen_peso = n/(n+60) = fracción que aporta la muestra CASEN. Se declara para no atribuir
+ // a CASEN una precisión que en esas comunas no tiene.
+ const casenNota=rows=>{
+  const f=rows.map(r=>r.casen_fuente).filter(Boolean); if(!f.length)return "";
+  const c=k=>f.filter(x=>x===k).length;
+  const sua=c("CASEN 2024 (suavizado)"), est=c("Estimación censal");
+  let t;
+  if(f.length===1){
+   const p=rows[0].casen_peso, n=rows[0].casen_n;
+   t=f[0]==="CASEN 2024"?"Muestra CASEN comunal (n="+(n||"?")+"), suavizado leve."
+    :f[0]==="CASEN 2024 (suavizado)"?"Muestra CASEN acotada (n="+(n||"?")+"): el valor mezcla CASEN con un modelo censal."
+    :"Muestra CASEN insuficiente (n="+(n||0)+"): el valor proviene principalmente de un modelo sobre variables del Censo.";
+   if(p!=null)t+=" Peso de CASEN: "+Math.round(p*100)+"%.";
+  }else if(sua||est){
+   t=(est?est+" comuna"+(est>1?"s":"")+" con estimación censal":"")+(est&&sua?" y ":"")+
+     (sua?sua+" con valor suavizado":"")+", de "+f.length+".";
+  }else{t="Muestra CASEN suficiente en las "+f.length+" comunas.";}
+  return '<div class="s" style="color:'+GREY+';font-size:.78rem;margin:-.2rem 0 .5rem">'+
+   'Base oficial: CASEN 2024, factor de expansión comunal <i>expc</i>. '+t+
+   ' El suavizado es del proyecto, no un producto oficial de CASEN.</div>';};
  const sii=["m2_total","m2pp_tot","m2pp_hab","m2pp_comercio","m2pp_educacion","m2pp_salud","m2pp_oficina","m2pp_industria","m2pp_deporte","pct_8pisos","ratio_depto_casa","anio_mediano","valor_suelo_med"];
  let h='<div class="grp-hd">Demografía y vivienda (Censo 2024)</div><div class="kpis">'+nseCard+demog.map(k=>kpiCard(k)).join("")+'</div>';
- h+='<div class="grp-hd">Ingreso y pobreza (CASEN 2024)</div><div class="kpis">'+casen.map(k=>kpiCard(k)).join("")+'</div>';
+ h+='<div class="grp-hd">Ingreso y pobreza (CASEN 2024)</div>'+casenNota(s.rows)+'<div class="kpis">'+casen.map(k=>kpiCard(k)).join("")+'</div>';
  if(hasSii)h+='<div class="grp-hd">Uso de suelo — uso efectivo (Catastro SII)</div><div class="kpis">'+sii.map(k=>kpiCard(k)).join("")+'</div>';
  const avaluo=["avaluo_total","avaluo_pp","pct_exento"];
  if(s.rows.some(r=>num(r.avaluo_total)!=null))h+='<div class="grp-hd">Avalúo fiscal (Catastro SII)</div><div class="kpis">'+avaluo.map(k=>kpiCard(k)).join("")+'</div>';
  const movil=["pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera"];
  if(s.rows.some(r=>num(r.pct_tpub)!=null))h+='<div class="grp-hd">Movilidad (Censo 2024)</div><div class="kpis">'+movil.map(k=>kpiCard(k)).join("")+'</div>';
+ // Política de vacíos: donde la fuente no tiene dato se muestra "s/d", no un valor imputado.
+ h+='<div class="s" style="color:'+GREY+';font-size:.78rem;margin-top:.9rem;border-top:1px solid var(--bd,#e3e8ef);padding-top:.5rem">'+
+    '<b>s/d</b> = la fuente no entrega el dato para esa comuna; se deja en blanco en vez de estimarlo. '+
+    'Casos conocidos: 13 comunas sin avalúo fiscal, 11 sin valor de suelo, 37 sin sector consolidado '+
+    'y 10 sin pobreza CASEN (comunas aisladas o de muestra insuficiente).</div>';
  document.getElementById("res-kpis").innerHTML=h;
 }
 
