@@ -117,8 +117,8 @@ const USOS=["Habitacional","Comercio","Educacion","Salud","Oficina","Industria"]
 const UC={Habitacional:"#16365a",Comercio:"#c55a11",Educacion:"#21918c",Salud:"#d73027",Oficina:"#8856a7",Industria:"#9aa7b4"};
 const fmt=x=>x==null?"s/d":Math.round(x).toLocaleString('es-CL');
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
-const CARTO_LIGHT="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const CARTO_DARK="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const CARTO_LIGHT="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const CARTO_DARK="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const TMAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
 function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;TMAPS.forEach(m=>{try{m.setUrl(u);}catch(e){}});}
@@ -126,7 +126,7 @@ function applyTheme(th){const d=th==="dark";document.documentElement.classList.t
 if(window.Chart){Chart.defaults.color=isDark()?"#a9c0de":"#5e6e80";}
 window.addEventListener("message",function(e){var d=e.data;if(d&&d.__tendTheme)applyTheme(d.__tendTheme);});
 function mapChrome(map){
- const claro=L.tileLayer(isDark()?CARTO_DARK:CARTO_LIGHT,{attribution:'&copy; CARTO',maxZoom:19});
+ const claro=L.tileLayer(isDark()?CARTO_DARK:CARTO_LIGHT,{attribution:'Tiles &copy; Esri',maxZoom:19,maxNativeZoom:16});
  const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar',maxZoom:19});
  claro.addTo(map);TMAPS.push(claro);L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
  const fc=L.control({position:"topleft"});fc.onAdd=function(){const d=L.DomUtil.create("div","leaflet-bar fs-ctrl");const a=L.DomUtil.create("a","",d);a.href="#";a.title="Pantalla completa";a.setAttribute("aria-label","Pantalla completa");a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>';
