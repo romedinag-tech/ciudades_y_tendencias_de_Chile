@@ -379,11 +379,12 @@ function renderResumen(){const s=S.sel;
    TAB 2 · OFERTA DE SERVICIOS POR HABITANTE (mapa zonal)
    ================================================================= */
 // ---- tema claro / oscuro ----
-const CARTO_LIGHT="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const CARTO_DARK="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+// Base sin API key (Esri Canvas): CARTO descontinuó su servicio anónimo y marca "API KEY REQUIRED".
+const BASE_LIGHT="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const BASE_DARK="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const MAPS=[];
 function isDark(){return document.documentElement.classList.contains("dark");}
-function applyMapTheme(){const u=isDark()?CARTO_DARK:CARTO_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
+function applyMapTheme(){const u=isDark()?BASE_DARK:BASE_LIGHT;MAPS.forEach(m=>{try{m.carto.setUrl(u);}catch(e){}});}
 function applyChartTheme(){if(!window.Chart)return;reReadAccents();Chart.defaults.color=cssv('--ink-mid');Chart.defaults.borderColor=cssv('--line');var t=Chart.defaults.plugins.tooltip;t.backgroundColor=cssv('--surface');t.titleColor=cssv('--ink');t.bodyColor=cssv('--ink-mid');t.borderColor=cssv('--line');}
 function rerenderActive(){const t=currentTab();if(t==="resumen"||t==="oferta"||t==="dinamica"){if(S.sel)finishSelect();}else if(t==="comparar"){cmpRefresh();}else if(t==="ranking"){drawRanking();}else if(t==="economia"){renderEconomia();}else if(t==="mercado"){renderMercado();}else if(t==="mapa"){renderNmap();}else if(t==="movilidad"){renderMovilidad();}}
 function postTheme(){const th=isDark()?"dark":"light";["if-demo","if-suelo"].forEach(id=>{const f=document.getElementById(id);if(f&&f.contentWindow)try{f.contentWindow.postMessage({__tendTheme:th},"*");}catch(e){}});}
@@ -395,7 +396,7 @@ function updateThemeIcon(){const b=document.getElementById("themeToggle");if(b)b
 function authorWM(map){const c=L.control({position:"bottomleft"});c.onAdd=function(){const d=L.DomUtil.create("div","author-wm");d.textContent="By Rodrigo Medina G.";return d;};c.addTo(map);return c;}
 // capas base (Mapa claro/oscuro según tema / Satélite) + pantalla completa + marca de autor
 function mapChrome(map){
- const claro=L.tileLayer(isDark()?CARTO_DARK:CARTO_LIGHT,{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19});
+ const claro=L.tileLayer(isDark()?BASE_DARK:BASE_LIGHT,{attribution:'Tiles &copy; Esri',maxZoom:19,maxNativeZoom:16});
  const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
  claro.addTo(map);MAPS.push({map,carto:claro});
  L.control.layers({"Mapa":claro,"Satélite":sat},null,{position:"topright"}).addTo(map);
