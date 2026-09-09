@@ -633,7 +633,7 @@ function renderCrecimiento(slug){
   empty.innerHTML="<b>Análisis temporal en preparación para "+S.sel.name+".</b><br>Las series de construcción por año (personas vs. m², casa/depto, densificación/expansión) se generan con el pipeline SII por comuna. Disponible para el <b>Gran Concepción</b>.";return;}
  wrap.style.display="";empty.style.display="none";
  if(S.crecCache[slug]){drawCrec(S.crecCache[slug]);return;}
- getJSON("data/crecimiento/"+slug+".json").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
+ getJSON("data/crecimiento/"+slug+".json?v=2").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
 }
 function drawCrec(D){
  // C1 índice base 2017
@@ -1191,7 +1191,7 @@ function comCentro(cut){if(S.centros&&S.centros[cut])return S.centros[cut];
  return f?odCentroid(f):null;}
 function renderOD(){const s=S.sel;
  const box=document.getElementById("mv-odbox"),bars=document.getElementById("mv-odbars");
- const loadOd=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json").then(d=>{S.od=d;return d;});
+ const loadOd=S.od?Promise.resolve(S.od):getJSON("data/movilidad/od.json?v=3").then(d=>{S.od=d;return d;});
  const loadC=S.centros?Promise.resolve(S.centros):getJSON("data/movilidad/centros.json").then(d=>{S.centros=d;return d;}).catch(()=>({}));
  Promise.all([loadOd,loadC]).then(([d])=>{
   box.style.display="";odWireN();odFlowMap(d);          // mapa de flujos: metros y comunas
@@ -1241,8 +1241,20 @@ function odFlowMap(d){const s=S.sel;const isMetro=s.type==="metro";
  allFlows.sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba));
  const total=allFlows.length,eff=odFillN(total);
  const flows=allFlows.slice(0,eff);
- const unidad=isMetro?" pares":" comunas conectadas";
- document.getElementById("mv-odn-info").textContent=(total<=15?"Mostrando los "+total:"Mostrando "+flows.length+" de "+total)+unidad+".";
+ // Cuando no hay ningún par, decir POR QUÉ en vez de un "0" mudo: son comunas aisladas cuyos
+ // flujos caen bajo el piso de celda pequeña, no un fallo del tablero.
+ const piso=(d&&d.umbral_min)||10;
+ const unidad=isMetro?(total===1?" par":" pares"):(total===1?" comuna conectada":" comunas conectadas");
+ const info=document.getElementById("mv-odn-info");
+ if(total===0){
+  info.innerHTML=isMetro
+   ? "No hay flujos entre las comunas de esta área sobre el piso de publicación ("+piso+" personas)."
+   : "<b>"+s.name+"</b> no intercambia trabajadores con ninguna otra comuna por sobre el piso de "+
+     "publicación (<b>"+piso+" personas</b>). No es una falla del tablero: prácticamente todos sus "+
+     "ocupados trabajan dentro de la propia comuna.";
+ }else{
+  info.textContent=(flows.length>=total?"Mostrando "+total:"Mostrando "+flows.length+" de "+total)+unidad+".";
+ }
  // mantener en cen/drawCuts solo lo que se dibuja (para encuadrar bien en comunas con muchas conexiones)
  if(!isMetro){const keep=new Set([String(s.key)]);flows.forEach(e=>{keep.add(e.a);keep.add(e.b);});
   Object.keys(cen).forEach(c=>{if(!keep.has(c))delete cen[c];});drawCuts.clear();keep.forEach(c=>drawCuts.add(c));}
