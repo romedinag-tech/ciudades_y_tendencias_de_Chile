@@ -161,6 +161,51 @@ h3{font-family:var(--font-display);color:var(--ink);font-weight:600}
 .addrow #alist .opt:hover,.addrow #alist .opt.hi{background:var(--surface-alt)}
 .addrow #alist .opt .rg{color:var(--mut);font-size:.76rem}
 .tablewrap{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+/* La tabla comparada desborda a lo ancho con 4 o más ciudades. Sin señal visible, el usuario
+   cree que faltan columnas: barra siempre a la vista + sombra en el borde con más contenido. */
+.tablewrap{scrollbar-width:thin;scrollbar-color:#b3c0d0 transparent}
+.tablewrap::-webkit-scrollbar{height:11px}
+.tablewrap::-webkit-scrollbar-track{background:transparent}
+.tablewrap::-webkit-scrollbar-thumb{background:#c3cedd;border-radius:7px;border:3px solid transparent;background-clip:content-box}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:#8fa1b8;background-clip:content-box}
+.tablewrap.more-r{box-shadow:inset -26px 0 22px -22px rgba(14,35,56,.45)}
+.tablewrap.more-l{box-shadow:inset 26px 0 22px -22px rgba(14,35,56,.45)}
+.tablewrap.more-l.more-r{box-shadow:inset 26px 0 22px -22px rgba(14,35,56,.45),inset -26px 0 22px -22px rgba(14,35,56,.45)}
+/* cabecera de tabla/gráfico con su control a la derecha */
+.tblhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px}
+.btn-ghost{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--line);
+ border-radius:9px;background:#fff;color:var(--navy);font:inherit;font-size:.84rem;font-weight:600;cursor:pointer}
+.btn-ghost:hover{border-color:var(--navy);background:var(--surface-alt)}
+.btn-ghost .ic{font-size:1rem;line-height:1}
+.btn-ghost[aria-pressed=true]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.hint{margin:6px 0 0;font-size:.83rem;color:var(--mut);line-height:1.55}
+/* control segmentado (lo usaba el panel de mercado sin estilo propio) */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{padding:7px 13px;border:0;background:transparent;color:var(--mut);font:inherit;font-size:.82rem;
+ font-weight:600;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--surface-alt);color:var(--navy)}
+.seg button.on{background:var(--navy);color:#fff}
+/* tabla a pantalla completa: conserva hover, mini-gráfico y modal, que son position:fixed */
+.tablewrap.full{position:fixed;inset:56px 14px 14px;z-index:1400;margin:0;background:var(--surface);
+ max-width:none;overflow:auto;box-shadow:0 24px 70px rgba(8,18,33,.35)}
+/* en pantalla completa se aprieta la celda: con 6 ciudades son ~200 px menos de tabla */
+.tablewrap.full table{font-size:.81rem}
+.tablewrap.full th,.tablewrap.full td{padding:7px 9px}
+body.tblfull{overflow:hidden}
+#tblfull-bar{display:none;position:fixed;top:12px;left:14px;right:14px;z-index:1401;align-items:center;
+ justify-content:space-between;gap:10px;font-size:.85rem;color:var(--mut)}
+body.tblfull #tblfull-bar{display:flex}
+/* aviso de lista truncada en los buscadores de ciudad (no es una opción: no se puede clicar) */
+.optmore{padding:9px 13px;font-size:.78rem;color:var(--mut);background:var(--surface-alt);
+ border-top:1px solid var(--line);line-height:1.5;cursor:default}
+.optmore b{color:var(--navy)}
+.scrollhint{display:none;align-items:center;gap:7px;margin-top:9px;font-size:.82rem;color:var(--mut)}
+.scrollhint.on{display:flex}
+.scrollhint b{color:var(--navy);font-weight:600}
+.scrollhint .ar{font-size:1rem;line-height:1;animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.scrollhint .ar{animation:none}}
 table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:560px}
 th,td{padding:11px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;line-height:1.5}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff}
@@ -257,7 +302,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   .tabs button .ti{margin-right:0}.tabs button .ti svg{width:21px;height:21px}
 }
 </style>
-<link rel="stylesheet" href="theme.css?v=3"/>
+<link rel="stylesheet" href="theme.css?v=5"/>
 <script>(function(){try{/* institucional: claro por defecto; oscuro solo si el usuario lo eligió */var t=localStorage.getItem("theme");if(t==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
 </head>
 <body>
@@ -397,7 +442,27 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
         </div>
       </div>
     </div>
+    <div class="tblhead">
+      <button id="cmp-expand" class="btn-ghost" type="button" aria-pressed="false"
+              title="Usar todo el ancho de la pantalla (Esc para salir)">
+        <span class="ic">⤢</span><span class="tx">Expandir tabla</span></button>
+    </div>
     <div class="tablewrap" id="cmp-tablewrap"></div>
+    <div class="scrollhint" id="cmp-scrollhint"></div>
+
+    <div class="chartbox" style="margin-top:26px">
+      <div class="tblhead" style="margin-bottom:2px">
+        <h3 style="margin:0;font-size:1.02rem">Tendencia del crecimiento urbano</h3>
+        <div class="seg" id="cmp-uso-seg" role="tablist" aria-label="Tipo de uso"></div>
+      </div>
+      <p class="hint" id="cmp-tend-sub"></p>
+      <div class="seg" id="cmp-tend-modo" style="margin:6px 0 12px">
+        <button data-modo="abs" class="on" type="button">m² construidos</button>
+        <button data-modo="idx" type="button">Índice 2000 = 100</button>
+        <button data-modo="inc" type="button">m² nuevos por año</button>
+      </div>
+      <div style="height:330px"><canvas id="cmp-tend"></canvas></div>
+    </div>
 
     <div class="panelctrl" style="margin-top:24px">
       <div><label>Eje X de la dispersión</label><select id="cmp-kx" class="kpisel"></select></div>
@@ -602,6 +667,7 @@ html.dark .cmp-modal-x{background:#0a2348;border-color:#16386a;color:#bcd0ec}
   <div class="foot-src">Fuentes: Censo INE 2017/2024 · Catastro de bienes raíces (SII) · CASEN 2024 · Estimaciones y Proyecciones de Población INE 2002–2035. Elaboración propia.</div>
 </div></footer>
 
+<div id="tblfull-bar"><span id="tblfull-tit"></span><button class="btn-ghost" id="tblfull-x" type="button"><span class="ic">✕</span><span class="tx">Cerrar (Esc)</span></button></div>
 <div id="cmp-pop"><canvas id="cmp-pop-cv"></canvas></div>
 <div id="cmp-modal"><div class="cmp-modal-box"><button class="cmp-modal-x" id="cmp-modal-x" aria-label="Cerrar">✕</button><div class="cmp-modal-cv"><canvas id="cmp-modal-cv"></canvas></div><div class="cmp-modal-foot">Comparación entre las ciudades seleccionadas · By Rodrigo Medina G.</div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -618,7 +684,7 @@ if(window.Chart){
   Chart.register({id:"authorWM",afterDraw(c){if(c.config.options&&c.config.options.__noWM)return;const a=c.chartArea;if(!a)return;const x=c.ctx;x.save();x.font="600 10px "+F;x.fillStyle="rgba(125,145,170,.55)";x.textAlign="right";x.textBaseline="top";x.fillText("By Rodrigo Medina G.",a.right,a.top+2);x.restore();}});
 }
 </script>
-<script src="app.js?v=44"></script>
+<script src="app.js?v=46"></script>
 <script>
 /* Marco de figura institucional: eyebrow (fuente) + microlínea de fuente en cada figura.
    Solo presentación; no toca datos ni el wiring de los gráficos. */

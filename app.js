@@ -8,6 +8,9 @@ const cssv=n=>(getComputedStyle(document.documentElement).getPropertyValue(n)||"
 let NAVY=cssv('--navy')||"#16365a",NAVY2=cssv('--navy2')||"#21507F",OR=cssv('--or')||"#C55A11",TEAL=cssv('--teal')||"#3F8E86",GREEN=cssv('--green')||"#2E8B57",RED=cssv('--red')||"#B2182B",GREY=cssv('--mut-2')||"#7C8AA0";
 let ACCENT=cssv('--accent')||"#1F6FEB";
 function reReadAccents(){NAVY=cssv('--navy')||NAVY;NAVY2=cssv('--navy2')||NAVY2;OR=cssv('--or')||OR;TEAL=cssv('--teal')||TEAL;GREEN=cssv('--green')||GREEN;RED=cssv('--red')||RED;GREY=cssv('--mut-2')||GREY;ACCENT=cssv('--accent')||ACCENT;}
+// último año completo del catastro (lo fija periodo_actual.py; se reconfirma al cargar
+// data/crecimiento/usos_comuna.json, que trae la lista de años que realmente se construyó)
+let ANIO_STOCK=2025;
 const CAT=['--cat-1','--cat-2','--cat-3','--cat-4','--cat-5','--cat-6'].map(cssv).filter(Boolean);
 const SEQ=['--seq-1','--seq-2','--seq-3','--seq-4','--seq-5'].map(cssv).filter(Boolean);
 Chart.defaults.font.family=cssv('--font-ui')||"Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
@@ -66,6 +69,17 @@ const KPI={
  ratio_depto_casa:{lbl:"Ratio departamento ÷ casa (construido)",grp:"Uso de suelo (Catastro SII)",u:"",dec:2,agg:"wmean",wt:"n_predios",sii:true,ramp:"PuBu",log:false},
  anio_mediano:{lbl:"Antigüedad — año de construcción mediano",grp:"Uso de suelo (Catastro SII)",u:"",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"OrRd",log:false},
  valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true},
+ // --- tendencia de crecimiento urbano por tipo de uso (build_crecimiento_usos.py) ---
+ m2u_tot:{lbl:"Stock construido — total",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"Viridis",log:true},
+ m2u_res:{lbl:"Stock construido — habitacional",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"PuBu",log:true},
+ m2u_com:{lbl:"Stock construido — comercio y servicios",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"OrRd",log:true},
+ m2u_equ:{lbl:"Stock construido — equipamiento",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
+ m2u_pro:{lbl:"Stock construido — industria y bodegas",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"YlOrRd",log:true},
+ cr_m2_tot:{lbl:"Crecimiento del stock 2017→"+ANIO_STOCK+" — total",grp:"Crecimiento urbano por uso (Catastro SII)",u:"%",dec:1,agg:"grow",gn:"m2u_tot",gd:"m2u_tot17",sii:true,ramp:"Greens",log:false},
+ cr_m2_res:{lbl:"Crecimiento 2017→"+ANIO_STOCK+" — habitacional",grp:"Crecimiento urbano por uso (Catastro SII)",u:"%",dec:1,agg:"grow",gn:"m2u_res",gd:"m2u_res17",sii:true,ramp:"PuBu",log:false},
+ cr_m2_com:{lbl:"Crecimiento 2017→"+ANIO_STOCK+" — comercio y servicios",grp:"Crecimiento urbano por uso (Catastro SII)",u:"%",dec:1,agg:"grow",gn:"m2u_com",gd:"m2u_com17",sii:true,ramp:"OrRd",log:false},
+ cr_m2_equ:{lbl:"Crecimiento 2017→"+ANIO_STOCK+" — equipamiento",grp:"Crecimiento urbano por uso (Catastro SII)",u:"%",dec:1,agg:"grow",gn:"m2u_equ",gd:"m2u_equ17",sii:true,ramp:"Greens",log:false},
+ cr_m2_pro:{lbl:"Crecimiento 2017→"+ANIO_STOCK+" — industria y bodegas",grp:"Crecimiento urbano por uso (Catastro SII)",u:"%",dec:1,agg:"grow",gn:"m2u_pro",gd:"m2u_pro17",sii:true,ramp:"YlOrRd",log:false},
  avaluo_total:{lbl:"Avalúo fiscal total",grp:"Avalúo fiscal (Catastro SII)",u:"millones CLP",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
  avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
  pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false},
@@ -117,6 +131,9 @@ function aggregate(rows,k){const m=KPI[k];
  if(m.agg==="varpct"){let a=0,p=0;rows.forEach(r=>{if(num(r.var_abs)!=null&&num(r.pob_2017)){a+=r.var_abs;p+=r.pob_2017;}});return p>0?100*a/p:null;}
  if(m.agg==="dens"){let P=0,A=0;rows.forEach(r=>{if(num(r.dens_hab_ha)>0&&num(r.pob_2024)>0){P+=r.pob_2024;A+=r.pob_2024/r.dens_hab_ha;}});return A>0?P/A:null;}
  if(m.agg==="dens_consol"){let P=0,A=0;rows.forEach(r=>{if(num(r.pob_consol)>0&&num(r.area_consol)>0){P+=r.pob_consol;A+=r.area_consol;}});return A>0?P/A:null;}
+ // crecimiento del stock construido: un % NO es aditivo, se recompone desde los dos niveles
+ if(m.agg==="grow"){let a=0,b=0;rows.forEach(r=>{const x=num(r[m.gn]),y=num(r[m.gd]);
+   if(x!=null&&y!=null){a+=x;b+=y;}});return b>0?100*(a-b)/b:null;}
  // wmean
  let nu=0,de=0;rows.forEach(r=>{const v=num(r[k]),w=num(r[m.wt]);if(v!=null&&w>0){nu+=v*w;de+=w;}});
  return de>0?nu/de:null;}
@@ -156,7 +173,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=12"),
+ getJSON("data/kpis_comunas.json?v=13"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
@@ -173,7 +190,10 @@ Promise.all([
  // y fusiona sus valores en las comunas, de modo que selector, comparador y ranking ya los vean.
  return initMercado().then(()=>{
  // estadísticas nacionales (promedio del país agregando todas las comunas, y mediana entre comunas)
- Object.keys(KPI).forEach(k=>{S.natAgg[k]=aggregate(S.kpis,k);S.natMed[k]=median(S.kpis.map(r=>num(r[k])));});
+ // los indicadores derivados (agg "grow") no existen como campo en la fila: su mediana se
+ // calcula comuna a comuna desde los dos niveles, no leyendo una columna que no está.
+ Object.keys(KPI).forEach(k=>{const m=KPI[k];S.natAgg[k]=aggregate(S.kpis,k);
+  S.natMed[k]=median(S.kpis.map(r=>m.agg==="grow"?aggregate([r],k):num(r[k])));});
  const nSii=S.kpis.filter(r=>num(r.m2_total)!=null).length;
  var _ht=document.getElementById("htag");if(_ht)_ht.textContent=S.kpis.length+" comunas · "+Object.keys(S.metros).length+" áreas metropolitanas · "+nSii+" con catastro SII";
  document.getElementById("nt-sii").textContent=nSii;
@@ -201,11 +221,17 @@ function buildSelector(){
  const ALL=selectorOptions();let hi=-1,shown=[];
  function render(q){q=(q||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
   shown=ALL.filter(o=>(o.label+" "+o.sub).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q));
-  const metros=shown.filter(o=>o.kind==="metro"),comunas=shown.filter(o=>o.kind==="comuna").slice(0,120);
+  const metros=shown.filter(o=>o.kind==="metro"),todasCom=shown.filter(o=>o.kind==="comuna");
+  const comunas=todasCom.slice(0,120);
   let h="";
   if(metros.length){h+='<div class="grouphd">Áreas metropolitanas</div>';
    metros.forEach(o=>h+=optHtml(o));}
   if(comunas.length){h+='<div class="grouphd">Comunas</div>';comunas.forEach(o=>h+=optHtml(o));}
+  // La lista va ordenada por tamaño, así que el corte esconde justo a las comunas chicas.
+  // Si no se avisa, parecen no existir (caso Chaitén: puesto 326 de 354).
+  if(todasCom.length>comunas.length)
+   h+='<div class="optmore">Mostrando '+comunas.length+' de '+todasCom.length+
+      ' comunas, de mayor a menor población · <b>escribe el nombre</b> para encontrar el resto</div>';
   if(!shown.length)h='<div class="opt">Sin resultados</div>';
   list.innerHTML=h;list.style.display="block";hi=-1;
   shown=metros.concat(comunas);
@@ -1442,7 +1468,8 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
 /* =================================================================
    TAB 4 · COMPARAR CIUDADES
    ================================================================= */
-const CMP={items:[],kpi:"m2pp_comercio",kx:"dens_hab_ha",ky:"m2pp_comercio",map:null,layer:null,legend:null,rank:null,scatter:null};
+const CMP={items:[],kpi:"m2pp_comercio",kx:"dens_hab_ha",ky:"m2pp_comercio",map:null,layer:null,legend:null,rank:null,scatter:null,
+ uso:"tot",tmodo:"abs",tend:null};
 function cmpEntity(o){ // o = {kind,key}
  if(o.kind==="metro"){const rows=S.metros[o.key].map(c=>S.byCut[c]).filter(Boolean);
   return {id:"m:"+o.key,name:o.key,kind:"metro",cuts:rows.map(r=>r.cut),rows};}
@@ -1462,8 +1489,15 @@ function buildComparador(){
  const box=document.getElementById("cmp-add"),list=document.getElementById("alist");
  const ALL=selectorOptions();let hi=-1,shown=[];
  function render(q){q=(q||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
-  shown=ALL.filter(o=>(o.label+" "+o.sub).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q)).slice(0,80);
-  list.innerHTML=shown.map(o=>'<div class="opt"><span>'+o.label+(o.metro?' ·metro':'')+'</span><span class="rg">'+o.sub+'</span></div>').join("")||'<div class="opt">Sin resultados</div>';
+  const todas=ALL.filter(o=>(o.label+" "+o.sub).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q));
+  shown=todas.slice(0,120);
+  let h=shown.map(o=>'<div class="opt"><span>'+o.label+(o.metro?' ·metro':'')+'</span><span class="rg">'+o.sub+'</span></div>').join("")||'<div class="opt">Sin resultados</div>';
+  // aviso de corte: la lista está ordenada por tamaño y sin esto las comunas chicas
+  // parecen no existir (caso Chaitén, puesto 326 de 354)
+  if(todas.length>shown.length)
+   h+='<div class="optmore">Mostrando '+shown.length+' de '+todas.length+
+      ', de mayor a menor población · <b>escribe el nombre</b> para encontrar el resto</div>';
+  list.innerHTML=h;
   list.style.display="block";hi=-1;
   [...list.querySelectorAll(".opt")].forEach((el,i)=>el.onclick=()=>add(shown[i]));}
  function add(o){if(!o)return;const it=cmpEntity({kind:o.kind,key:o.key});
@@ -1479,6 +1513,7 @@ function buildComparador(){
  document.addEventListener("click",e=>{if(!e.target.closest(".addrow .field"))list.style.display="none";});
  // selección inicial: Gran Concepción + Gran Santiago + Gran Valparaíso
  ["Gran Concepción","Gran Santiago","Gran Valparaíso"].forEach(n=>{if(S.metros[n])CMP.items.push(cmpEntity({kind:"metro",key:n}));});
+ cmpBindFull();cmpTendInit();
  cmpRefresh();
 }
 function cmpRefresh(){
@@ -1487,11 +1522,54 @@ function cmpRefresh(){
   '<div class="chip"><b>'+it.name+'</b><span data-id="'+it.id+'">✕</span></div>').join("")||'<span style="color:#5b6b7b;font-size:.85rem">Agrega ciudades para comparar.</span>';
  document.querySelectorAll("#cmp-chips .chip span").forEach(s=>s.onclick=()=>{
   CMP.items=CMP.items.filter(x=>x.id!==s.getAttribute("data-id"));cmpRefresh();});
- cmpTable();cmpScatter();cmpMapDraw();
+ cmpTable();cmpScatter();cmpMapDraw();cmpTend();
 }
+/* ---------- tabla comparada a pantalla completa ----------
+   La tabla crece ~190 px por ciudad: con 5 o más no cabe en el ancho de la página. En modo
+   expandido ocupa toda la ventana y conserva sus funciones, porque el mini-gráfico de hover
+   (#cmp-pop, z-index 1500) y el modal (2000) son position:fixed y quedan por encima. */
+function cmpToggleFull(on){
+ const w=document.getElementById("cmp-tablewrap"),b=document.getElementById("cmp-expand");
+ if(on===undefined)on=!w.classList.contains("full");
+ w.classList.toggle("full",on);document.body.classList.toggle("tblfull",on);
+ b.setAttribute("aria-pressed",on?"true":"false");
+ b.querySelector(".tx").textContent=on?"Volver al ancho normal":"Expandir tabla";
+ b.querySelector(".ic").textContent=on?"⤡":"⤢";
+ const t=document.getElementById("tblfull-tit");
+ if(t)t.textContent=on?("Comparando "+CMP.items.length+" ciudades — "+CMP.items.map(i=>i.name).join(" · ")):"";
+ if(!on)cmpHidePop();
+ setTimeout(()=>tableScrollHints(),50);
+}
+function cmpBindFull(){
+ const b=document.getElementById("cmp-expand");if(!b||b.dataset.bound)return;b.dataset.bound="1";
+ b.onclick=()=>cmpToggleFull();
+ const x=document.getElementById("tblfull-x");if(x)x.onclick=()=>cmpToggleFull(false);
+ document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&document.body.classList.contains("tblfull"))cmpToggleFull(false);});
+}
+// ---- señal de desplazamiento horizontal en las tablas anchas ----
+// La tabla comparada desborda con 4+ ciudades y el scrollbar de Windows es un overlay que
+// solo aparece al desplazar: sin esta señal el usuario cree que las columnas no existen.
+function tableScrollHints(){
+ document.querySelectorAll(".tablewrap").forEach(w=>{
+  const max=w.scrollWidth-w.clientWidth, hay=max>2;
+  w.classList.toggle("more-r",hay&&w.scrollLeft<max-2);
+  w.classList.toggle("more-l",hay&&w.scrollLeft>2);
+  if(!w.dataset.hintBound){w.dataset.hintBound="1";
+   w.addEventListener("scroll",()=>tableScrollHints(),{passive:true});}
+ });
+ const hint=document.getElementById("cmp-scrollhint"),wr=document.getElementById("cmp-tablewrap");
+ if(hint&&wr){const oculta=wr.scrollWidth-wr.clientWidth>2;
+  hint.classList.toggle("on",oculta);
+  if(oculta)hint.innerHTML='<span class="ar">↔</span><span>La tabla es más ancha que la pantalla: '+
+   'desplázala para ver las <b>'+CMP.items.length+' ciudades</b> y las columnas nacionales.</span>';}
+}
+window.addEventListener("resize",()=>tableScrollHints());
 const CMP_ROWS=["pob_2024","var_pct","dens_hab_ha","dens_consol","pct_depto","per_hog","pct_60mas","escol",
  "nse_score","casen_ing_pc","casen_pobreza_pct","pct_terciaria","pct_ciuo123","pct_internet","pct_hacin","pct_arriendo",
  "m2_total","m2pp_tot","m2pp_comercio","m2pp_educacion","m2pp_salud","pct_8pisos","anio_mediano","valor_suelo_med",
+ "m2u_tot","m2u_res","m2u_com","m2u_equ","m2u_pro",
+ "cr_m2_tot","cr_m2_res","cr_m2_com","cr_m2_equ","cr_m2_pro",
  "avaluo_total","avaluo_pp","pct_exento",
  "pct_tpub","pct_auto","pct_camina","pct_bici","pct_teletrabajo","pct_fuera","viajes_atraidos"];
 function cmpTable(){const w=document.getElementById("cmp-tablewrap");
@@ -1514,10 +1592,83 @@ function cmpTable(){const w=document.getElementById("cmp-tablewrap");
   h+='<td style="color:#9aa7b4">'+fmtKpi(k,S.natAgg[k])+'</td>'+
      '<td style="color:#9aa7b4">'+fmtKpi(k,S.natMed[k])+'</td></tr>';});
  h+='</tbody></table>';w.innerHTML=h;
+ tableScrollHints();
  // hover -> mini gráfico comparado; click -> gráfico grande en pantalla
  w.querySelectorAll("tbody tr[data-k]").forEach(tr=>{const k=tr.dataset.k;
    tr.onmouseenter=ev=>cmpShowPop(k,ev);tr.onmousemove=cmpMovePop;tr.onmouseleave=cmpHidePop;
    tr.onclick=()=>{cmpHidePop();cmpOpenModal(k);};});
+}
+/* ---------- tendencia del crecimiento urbano por tipo de uso ----------
+   data/crecimiento/usos_comuna.json trae, por comuna, el stock previo a 2000 y los m² que se
+   agregan cada año, abiertos en cinco familias de uso. Los m² son aditivos, así que un área
+   metropolitana es la suma de sus comunas: no hay nada que recalcular en el servidor. */
+const USO_LBL={tot:"Todos los usos",res:"Habitacional",com:"Comercio y servicios",
+ equ:"Equipamiento",pro:"Industria y bodegas",otr:"Estacionamiento y otros"};
+const USO_ORD=["tot","res","com","equ","pro","otr"];
+function cmpTendInit(){
+ const seg=document.getElementById("cmp-uso-seg");if(!seg||seg.dataset.bound)return;seg.dataset.bound="1";
+ seg.innerHTML=USO_ORD.map(u=>'<button type="button" data-uso="'+u+'"'+(u===CMP.uso?' class="on"':'')+'>'+
+   USO_LBL[u]+'</button>').join("");
+ seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{CMP.uso=b.dataset.uso;
+   seg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));cmpTend();});
+ const md=document.getElementById("cmp-tend-modo");
+ md.querySelectorAll("button").forEach(b=>b.onclick=()=>{CMP.tmodo=b.dataset.modo;
+   md.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));cmpTend();});
+}
+function cmpTendLoad(){
+ if(S.usos)return Promise.resolve(S.usos);
+ if(S.usosP)return S.usosP;
+ S.usosP=getJSON("data/crecimiento/usos_comuna.json?v=1").then(d=>{S.usos=d;
+   if(d&&d.anios&&d.anios.length)ANIO_STOCK=d.anios[d.anios.length-1];
+   return d;}).catch(()=>{S.usos=null;return null;});
+ return S.usosP;
+}
+// stock acumulado de una ciudad (suma de sus comunas) para el uso pedido
+function cmpSerie(it,uso,D){
+ const n=D.anios.length,out=new Array(n).fill(0),incs=new Array(n).fill(0);
+ let base=0,hay=false;
+ it.cuts.forEach(c=>{const e=D.comunas[String(c)];if(!e)return;hay=true;
+  if(uso==="tot"){D.usos.forEach((u,ui)=>{base+=e.base[ui];
+    for(let i=0;i<n;i++)incs[i]+=e.inc[u][i];});}
+  else{const ui=D.usos.indexOf(uso);base+=e.base[ui];
+    for(let i=0;i<n;i++)incs[i]+=e.inc[uso][i];}});
+ if(!hay)return null;
+ let acc=base;for(let i=0;i<n;i++){acc+=incs[i];out[i]=acc;}
+ return {stock:out,inc:incs};
+}
+function cmpTend(){
+ cmpTendInit();
+ const cv=document.getElementById("cmp-tend");if(!cv)return;
+ cmpTendLoad().then(D=>{
+  const sub=document.getElementById("cmp-tend-sub");
+  if(!D){if(sub)sub.textContent="No se pudo cargar la serie de crecimiento por uso.";return;}
+  const uso=CMP.uso,modo=CMP.tmodo;
+  const series=CMP.items.map((it,i)=>({it,i,s:cmpSerie(it,uso,D)})).filter(x=>x.s);
+  const ds=series.map(({it,i,s})=>{
+   let data;
+   if(modo==="inc")data=s.inc;
+   else if(modo==="idx"){const b=s.stock[0];data=b>0?s.stock.map(v=>100*v/b):s.stock.map(()=>null);}
+   else data=s.stock;
+   const col=CAT.length?CAT[i%CAT.length]:[NAVY,OR,TEAL,GREEN,RED,GREY][i%6];
+   return {label:it.name,data,borderColor:col,backgroundColor:col,
+     borderWidth:2.2,pointRadius:0,pointHoverRadius:4,tension:.25,
+     ...(modo==="inc"?{type:"bar",borderWidth:0,barPercentage:.9,categoryPercentage:.85}:{})};});
+  const ylbl=modo==="idx"?"Índice (2000 = 100)":(modo==="inc"?"m² agregados en el año":"m² construidos acumulados");
+  if(CMP.tend)CMP.tend.destroy();
+  CMP.tend=new Chart(cv,{type:modo==="inc"?"bar":"line",
+   data:{labels:D.anios,datasets:ds},
+   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{position:"bottom",labels:{boxWidth:12,usePointStyle:true}},
+     tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.parsed.y,modo==="idx"?1:0)+
+       (modo==="idx"?"":" m²")}}},
+    scales:{x:{grid:{display:false}},
+     y:{beginAtZero:modo!=="idx",ticks:{callback:v=>fmt(v,0)},title:{display:true,text:ylbl}}}}});
+  if(sub){const ultimo=D.anios[D.anios.length-1];
+   sub.innerHTML="Stock construido según el año de construcción del catastro SII, en "+
+    USO_LBL[uso].toLowerCase()+". <b>Los últimos años están subcontados</b>: el SII registra la obra "+
+    "nueva con rezago, por eso "+(ultimo-1)+"–"+ultimo+" se aplanan. Sirve para comparar ciudades "+
+    "entre sí —el rezago es parejo—, no como nivel cerrado del último año.";}
+ });
 }
 // ---- gráfico comparado por indicador (hover = popup; click = modal) ----
 function cmpChartConfig(k,big){const m=KPI[k];
@@ -1536,8 +1687,12 @@ function cmpChartConfig(k,big){const m=KPI[k];
 let cmpPopChart=null,cmpModalChart=null;
 function cmpShowPop(k,ev){if(!KPI[k])return;const pop=document.getElementById("cmp-pop");if(!pop)return;
  if(cmpPopChart)cmpPopChart.destroy();
+ // ORDEN: primero mostrar, forzar el reflow y recién ahí crear el gráfico. Al revés, Chart.js
+ // mide el canvas con el popup en display:none y lo deja en 0x0 (medido: 0 píxeles pintados).
+ pop.style.display="block";cmpMovePop(ev);
+ void pop.offsetHeight;
  cmpPopChart=new Chart(document.getElementById("cmp-pop-cv"),cmpChartConfig(k,false));
- pop.style.display="block";cmpMovePop(ev);}
+ cmpPopChart.resize();}
 function cmpMovePop(ev){const pop=document.getElementById("cmp-pop");if(!pop||pop.style.display==="none")return;
  const w=pop.offsetWidth||340,hh=pop.offsetHeight||220;let x=ev.clientX+16,y=ev.clientY+16;
  if(x+w>innerWidth-8)x=ev.clientX-w-16;if(x<8)x=8;if(y+hh>innerHeight-8)y=innerHeight-hh-8;if(y<8)y=8;
@@ -1545,7 +1700,14 @@ function cmpMovePop(ev){const pop=document.getElementById("cmp-pop");if(!pop||po
 function cmpHidePop(){const pop=document.getElementById("cmp-pop");if(pop)pop.style.display="none";if(cmpPopChart){cmpPopChart.destroy();cmpPopChart=null;}}
 function cmpOpenModal(k){const md=document.getElementById("cmp-modal");if(!md)return;md.classList.add("on");
  if(cmpModalChart)cmpModalChart.destroy();
- cmpModalChart=new Chart(document.getElementById("cmp-modal-cv"),cmpChartConfig(k,true));}
+ // El modal pasa de display:none a flex en este mismo frame: se fuerza el reflow leyendo
+ // offsetHeight para que Chart.js mida el canvas ya visible y no lo deje en 300x150.
+ // (NO usar requestAnimationFrame acá: en una pestaña en segundo plano no se dispara y el
+ //  gráfico no llegaría a crearse nunca.)
+ const cv=document.getElementById("cmp-modal-cv");
+ void md.offsetHeight;
+ cmpModalChart=new Chart(cv,cmpChartConfig(k,true));
+ cmpModalChart.resize();}
 function cmpCloseModal(){const md=document.getElementById("cmp-modal");if(!md)return;md.classList.remove("on");if(cmpModalChart){cmpModalChart.destroy();cmpModalChart=null;}}
 (function(){const x=document.getElementById("cmp-modal-x"),md=document.getElementById("cmp-modal");
  if(x)x.onclick=cmpCloseModal;
@@ -1801,6 +1963,8 @@ function activateTab(t){
  if(t==="dinamica"&&iMap)setTimeout(()=>{iMap.invalidateSize();if(imLayer)iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});},60);
  if(t==="dinamica"&&dMap)setTimeout(()=>{dMap.invalidateSize();if(dLayer&&dLayer.getBounds().isValid())dMap.fitBounds(dLayer.getBounds(),{padding:[10,10]});},80);
  if(t==="comparar"){cmpMapDraw();}
+ // el ancho real solo se conoce con el panel visible: recalcular las señales de scroll
+ setTimeout(()=>tableScrollHints(),60);
  if(t==="ranking")drawRanking();
  if(t==="mapa")renderNmap();
  if(t==="movilidad"){renderMovilidad();if(mvMap)setTimeout(()=>{mvMap.invalidateSize();if(mvLayer&&mvLayer.getBounds().isValid())mvMap.fitBounds(mvLayer.getBounds(),{padding:[10,10]});},80);

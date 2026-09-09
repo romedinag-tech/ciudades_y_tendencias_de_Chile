@@ -85,3 +85,20 @@ html.dark .foot-src{color:#6b7382 !important}
 html.dark .tabs button .ti{color:#6b7382}
 html.dark .tabs button.on .ti,html.dark .tabs button:hover .ti{color:var(--accent)}
 html.dark .skel{background:#1a212c}
+
+/* La sombra de borde que avisa que la tabla sigue hacia el lado: el bloque de arriba apaga
+   todas las sombras en modo oscuro con !important, así que hay que reponerla acá. */
+html.dark .tablewrap.more-r{box-shadow:inset -26px 0 22px -22px rgba(0,0,0,.85) !important}
+html.dark .tablewrap.more-l{box-shadow:inset 26px 0 22px -22px rgba(0,0,0,.85) !important}
+html.dark .tablewrap.more-l.more-r{box-shadow:inset 26px 0 22px -22px rgba(0,0,0,.85),inset -26px 0 22px -22px rgba(0,0,0,.85) !important}
+html.dark .tablewrap{scrollbar-color:#4a5464 transparent}
+html.dark .tablewrap::-webkit-scrollbar-thumb{background:#4a5464;background-clip:content-box}
+html.dark .tablewrap::-webkit-scrollbar-thumb:hover{background:#69748a;background-clip:content-box}
+html.dark .scrollhint b{color:var(--accent)}
+html.dark .btn-ghost{background:var(--panel);color:var(--ink);border-color:var(--line)}
+html.dark .btn-ghost:hover{border-color:var(--accent);background:var(--panel-2,var(--panel))}
+html.dark .btn-ghost[aria-pressed=true]{background:var(--neural,var(--accent));color:#fff;border-color:transparent}
+html.dark .tablewrap.full{box-shadow:0 24px 70px rgba(0,0,0,.65) !important}
+html.dark #tblfull-bar{color:var(--ink)}
+html.dark .optmore{background:var(--panel) !important;color:var(--mut) !important;border-top-color:var(--line) !important}
+html.dark .optmore b{color:var(--accent) !important}
