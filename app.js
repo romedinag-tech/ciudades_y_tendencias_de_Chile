@@ -173,13 +173,13 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=13"),
+ getJSON("data/kpis_comunas.json?v=14"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
- getJSON("data/zonas_index.json").catch(()=>({slugs:[]})),
- getJSON("data/crecimiento_index.json").catch(()=>({slugs:[]})),
- getJSON("data/ranking_growth.json").catch(()=>({})),
- getJSON("data/intercensal_index.json").catch(()=>({slugs:[]}))
+ getJSON("data/zonas_index.json?v=2").catch(()=>({slugs:[]})),
+ getJSON("data/crecimiento_index.json?v=2").catch(()=>({slugs:[]})),
+ getJSON("data/ranking_growth.json?v=2").catch(()=>({})),
+ getJSON("data/intercensal_index.json?v=2").catch(()=>({slugs:[]}))
 ]).then(([kp,ma,geo,zi,ci,rg,ii])=>{
  S.kpis=kp.comunas; S.metros=ma.metros; S.comunasGeo=geo; S.rg=rg||{}; S.nseMeta=(kp.meta&&kp.meta.nse)||null;
  (zi.slugs||[]).forEach(s=>HAS_ZONAL[s]=1);
@@ -199,7 +199,7 @@ Promise.all([
  document.getElementById("nt-sii").textContent=nSii;
  buildSelector(); buildComparador(); buildRegionNav(); buildRanking();
  // cobertura zonal (no bloquea; sólo para la nota de comunas omitidas)
- getJSON("data/zonas_cobertura.json").then(c=>{ZCOV=c;}).catch(()=>{});
+ getJSON("data/zonas_cobertura.json?v=2").then(c=>{ZCOV=c;}).catch(()=>{});
  // selección inicial desde la URL (enlace compartido) o Gran Concepción por defecto
  applyURL();
  });
@@ -518,7 +518,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -641,7 +641,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -654,7 +654,7 @@ function renderCrecimiento(slug){
   empty.innerHTML="<b>Análisis temporal en preparación para "+S.sel.name+".</b><br>Las series de construcción por año (personas vs. m², casa/depto, densificación/expansión) se generan con el pipeline SII por comuna. Disponible para el <b>Gran Concepción</b>.";return;}
  wrap.style.display="";empty.style.display="none";
  if(S.crecCache[slug]){drawCrec(S.crecCache[slug]);return;}
- getJSON("data/crecimiento/"+slug+".json?v=2").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
+ getJSON("data/crecimiento/"+slug+".json?v=3").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
 }
 function drawCrec(D){
  // C1 índice base 2017
@@ -747,7 +747,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -928,7 +928,7 @@ function ensureMktMap(){if(mktMap)return;
 function drawMktMap(slug){const box=document.getElementById("mkt-mapbox");
  if(!slug){box.style.display="none";return;}
  S.mktZcache=S.mktZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  const mzP=(slug in S.mktZcache)?Promise.resolve(S.mktZcache[slug]):getJSON("data/mercado/zonas/"+slug+".json?v=2").then(d=>{S.mktZcache[slug]=d;return d;}).catch(()=>{S.mktZcache[slug]=null;return null;});
  Promise.all([geoP,mzP]).then(([gf,d])=>{
   if(!d){box.style.display="none";return;}
@@ -1050,8 +1050,8 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
- const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=5").then(d=>{S.ecoZcache[slug]=d;return d;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=6").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
     return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
@@ -1468,7 +1468,7 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
  if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
  const sel=document.getElementById("mv-sel");sel.value=mvKey;
  sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=7").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=8").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  geoP.then(gf=>{
   if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
   box.style.display="";ensureMvMap();
@@ -1651,7 +1651,7 @@ function cmpTendInit(){
 function cmpTendLoad(){
  if(S.usos)return Promise.resolve(S.usos);
  if(S.usosP)return S.usosP;
- S.usosP=getJSON("data/crecimiento/usos_comuna.json?v=1").then(d=>{S.usos=d;
+ S.usosP=getJSON("data/crecimiento/usos_comuna.json?v=2").then(d=>{S.usos=d;
    if(d&&d.anios&&d.anios.length)ANIO_STOCK=d.anios[d.anios.length-1];
    return d;}).catch(()=>{S.usos=null;return null;});
  return S.usosP;
