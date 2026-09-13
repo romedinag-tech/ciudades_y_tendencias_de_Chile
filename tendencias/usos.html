@@ -153,7 +153,7 @@ function drawZoneMap(slug){
    document.getElementById("obox").style.display="none";document.getElementById("tlbox").style.display="none";return;}
  mapEl.style.display="";ctr.style.display="flex";note.textContent="Cada zona censal según el uso, año y escenario elegidos. Haz clic en una zona para ver su trayectoria.";
  if(!zmap){zmap=L.map("map",{preferCanvas:true}).setView([-36.8,-73.05],11);mapChrome(zmap);}
- fetch("data/proyecciones_uso/zonas_"+slug+".geojson?v=3").then(r=>r.text()).then(t=>{ZG=JSON.parse(t.replace(/\bNaN\b/g,"null"));
+ fetch("data/proyecciones_uso/zonas_"+slug+".geojson?v=4").then(r=>r.text()).then(t=>{ZG=JSON.parse(t.replace(/\bNaN\b/g,"null"));
    const us=document.getElementById("zuse");us.innerHTML=Object.keys(ZG.usos).map(k=>'<option value="'+k+'">'+ZG.usos[k]+'</option>').join("");us.value=zUse;
    ["ouse","tluse"].forEach(id=>{const s=document.getElementById(id);s.innerHTML=Object.keys(ZG.usos).map(k=>'<option value="'+k+'">'+ZG.usos[k]+'</option>').join("");});
    document.getElementById("ouse").value=oUse;document.getElementById("tluse").value=tlUse;
@@ -233,8 +233,8 @@ function recolorZones(fit){if(!ZG)return;const useLbl=ZG.usos[zUse],yrLbl=ZG.ani
  if(fit){try{zmap.fitBounds(zlayer.getBounds(),{padding:[8,8]});}catch(e){}}
  setTimeout(()=>zmap.invalidateSize(),60);
 }
-fetch("data/zonas_mapa_index.json").then(r=>r.text()).then(t=>{(JSON.parse(t.replace(/\bNaN\b/g,"null")).ciudades||[]).forEach(c=>ZMAP.add(c.slug));}).catch(()=>{});
-fetch("data/proyecciones_uso_index.json").then(r=>r.text()).then(t=>{IDX=JSON.parse(t.replace(/\bNaN\b/g,"null"));
+fetch("data/zonas_mapa_index.json?v=2").then(r=>r.text()).then(t=>{(JSON.parse(t.replace(/\bNaN\b/g,"null")).ciudades||[]).forEach(c=>ZMAP.add(c.slug));}).catch(()=>{});
+fetch("data/proyecciones_uso_index.json?v=2").then(r=>r.text()).then(t=>{IDX=JSON.parse(t.replace(/\bNaN\b/g,"null"));
  const sel=document.getElementById("city");
  IDX.ciudades.forEach(c=>{const o=document.createElement("option");o.value=c.slug;o.textContent=c.nombre;sel.appendChild(o);});
  sel.onchange=()=>load(sel.value);
@@ -258,7 +258,7 @@ fetch("data/proyecciones_uso_index.json").then(r=>r.text()).then(t=>{IDX=JSON.pa
  else { // embebido sin mensaje aún: si el padre no postea en 1.5s, carga una por defecto (anti-pantalla en blanco ante caché)
    setTimeout(function(){ if(!window.__embedUsos){ var sl=_defSlug(); sel.value=sl; load(sl); } },1500); }
 });
-function load(slug){fetch("data/proyecciones_uso/"+slug+".json").then(r=>r.text()).then(t=>{CUR=JSON.parse(t.replace(/\bNaN\b/g,"null"));render();drawZoneMap(slug);});}
+function load(slug){fetch("data/proyecciones_uso/"+slug+".json?v=2").then(r=>r.text()).then(t=>{CUR=JSON.parse(t.replace(/\bNaN\b/g,"null"));render();drawZoneMap(slug);});}
 function render(){const o=CUR;if(!o)return;
  // KPIs: total + top uso que más crece
  const tot=o.total;const pctsorted=USOS.map(u=>[u,o.usos[u].pct_2035]).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);

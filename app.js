@@ -594,8 +594,29 @@ function renderZona(){imClear();const feats=iData.zon.features;
   onEachFeature:(f,l)=>{const p=f.properties;
     l.on("mouseover",()=>l.setStyle({weight:2,color:"#1F6FEB"}));
     l.on("mouseout",()=>l.setStyle({weight:.5,color:"#5b6b7b"}));
-    l.bindPopup('<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna)+'<br>Pob. consolidada 2017: '+fmtN(p.pob17)+
-      '<br>2024: '+fmtN(p.pob24i)+'<br><b>'+sg(fmtN(p.dpob))+' hab ('+(p.vpct==null?'s/d':sg(fmt(p.vpct,1))+'%')+')</b>');}
+    // Tres casos distintos que antes caían todos en "2017: 0 · 2024: 0 · +0 hab (s/d)":
+    //  (a) la zona tiene gente pero NINGUNA de sus manzanas conserva el código de 2017, porque el
+    //      INE recartografió → la variación no se puede medir por este método (53 zonas, 80 mil hab);
+    //  (b) la zona no tiene población residente;
+    //  (c) hay manzanas comparables → variación medible.
+    const pobTot=(p.pob24t!=null?p.pob24t:p.pob)||0;
+    const cab='<b>Zona '+p.zona+'</b> · '+titleCase(p.comuna);
+    let html;
+    if(p.pob17>0){
+     html=cab+'<br>Población 2024: <b>'+fmtN(pobTot)+'</b> hab'+
+      '<br>En manzanas comparables — 2017: '+fmtN(p.pob17)+' · 2024: '+fmtN(p.pob24i)+
+      '<br><b>'+sg(fmtN(p.dpob))+' hab ('+sg(fmt(p.vpct,1))+'%)</b>'+
+      (p.pob24i<pobTot?'<br><span style="color:#8a94a6;font-size:.85em">'+fmtN(pobTot-p.pob24i)+
+        ' hab están en manzanas nuevas o recodificadas y no entran a la comparación</span>':'');
+    }else if(pobTot>0){
+     html=cab+'<br>Población 2024: <b>'+fmtN(pobTot)+'</b> hab'+
+      '<br><span style="color:#8a94a6;font-size:.88em">Ninguna manzana de esta zona conserva su código '+
+      'de 2017: el INE recartografió el sector, así que la variación <b>no se puede medir</b> con esta '+
+      'vista. Para el dato oficial usa <b>Por comuna</b>.</span>';
+    }else{
+     html=cab+'<br>Zona sin población residente en 2024.';
+    }
+    l.bindPopup(html);}
  }).addTo(iMap);
  iMap.fitBounds(imLayer.getBounds(),{padding:[10,10]});
  imLegend=legendPct();imLegend.addTo(iMap);
