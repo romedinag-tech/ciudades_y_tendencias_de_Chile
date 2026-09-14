@@ -173,7 +173,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zรกร
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=14"),
+ getJSON("data/kpis_comunas.json?v=15"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json?v=2").catch(()=>({slugs:[]})),
