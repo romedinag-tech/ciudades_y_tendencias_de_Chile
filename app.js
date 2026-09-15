@@ -173,7 +173,7 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=17"),
+ getJSON("data/kpis_comunas.json?v=18"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json?v=2").catch(()=>({slugs:[]})),
@@ -518,7 +518,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -641,7 +641,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -747,7 +747,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -796,10 +796,10 @@ function initMercado(){
        x.classList.toggle("on",on);x.setAttribute("aria-selected",on?"true":"false");});
      drawMktMap(dataSlug());});
    return Promise.all([
-     getJSON("data/mercado/kpis_mercado.json?v=2").then(k=>{
+     getJSON("data/mercado/kpis_mercado.json?v=3").then(k=>{
        (S.kpis||[]).forEach(c=>{const m=k[String(c.cut)];if(m)Object.assign(c,m);});}),
      // el índice no bloquea el módulo: si falta, la pestaña funciona sin ese gráfico
-     getJSON("data/mercado/repeat_sales.json?v=2").then(d=>{S.rs=d;}).catch(()=>{S.rs=null;})
+     getJSON("data/mercado/repeat_sales.json?v=3").then(d=>{S.rs=d;}).catch(()=>{S.rs=null;})
    ]);
  }).catch(()=>{mktOn=false;quitarMercado();});}
 const MKT_ANIOS=["2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"];
@@ -823,7 +823,7 @@ function mktData(){const s=S.sel;if(!s||!S.mkt)return null;
    .filter(x=>x.ufm2!=null).sort((a,b)=>b.ufm2-a.ufm2);
  return {ops,uf:w(r=>r.uf_med),ufm2:w(r=>r.ufm2),brecha:w(r=>r.brecha),serie,porTipo};}
 function renderMercado(){
- if(!mktLoaded){getJSON("data/mercado/comunas.json?v=2").then(d=>{S.mkt=d.comunas||{};S.mktMeta=d.meta;
+ if(!mktLoaded){getJSON("data/mercado/comunas.json?v=3").then(d=>{S.mkt=d.comunas||{};S.mktMeta=d.meta;
      mktLoaded=true;drawMkt();})
    .catch(()=>{document.getElementById("mkt-kpis").innerHTML='<div class="note">Datos de mercado no disponibles.</div>';});return;}
  drawMkt();}
@@ -928,8 +928,8 @@ function ensureMktMap(){if(mktMap)return;
 function drawMktMap(slug){const box=document.getElementById("mkt-mapbox");
  if(!slug){box.style.display="none";return;}
  S.mktZcache=S.mktZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
- const mzP=(slug in S.mktZcache)?Promise.resolve(S.mktZcache[slug]):getJSON("data/mercado/zonas/"+slug+".json?v=2").then(d=>{S.mktZcache[slug]=d;return d;}).catch(()=>{S.mktZcache[slug]=null;return null;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const mzP=(slug in S.mktZcache)?Promise.resolve(S.mktZcache[slug]):getJSON("data/mercado/zonas/"+slug+".json?v=3").then(d=>{S.mktZcache[slug]=d;return d;}).catch(()=>{S.mktZcache[slug]=null;return null;});
  Promise.all([geoP,mzP]).then(([gf,d])=>{
   if(!d){box.style.display="none";return;}
   box.style.display="";
@@ -1050,7 +1050,7 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=7").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
@@ -1468,7 +1468,7 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
  if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
  const sel=document.getElementById("mv-sel");sel.value=mvKey;
  sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=11").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  geoP.then(gf=>{
   if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
   box.style.display="";ensureMvMap();
