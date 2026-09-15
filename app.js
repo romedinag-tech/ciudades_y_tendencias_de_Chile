@@ -68,7 +68,7 @@ const KPI={
  pct_8pisos: {lbl:"Predios de 8+ pisos (verticalización)",grp:"Uso de suelo (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"n_predios",sii:true,ramp:"BuPu",log:false},
  ratio_depto_casa:{lbl:"Ratio departamento ÷ casa (construido)",grp:"Uso de suelo (Catastro SII)",u:"",dec:2,agg:"wmean",wt:"n_predios",sii:true,ramp:"PuBu",log:false},
  anio_mediano:{lbl:"Antigüedad — año de construcción mediano",grp:"Uso de suelo (Catastro SII)",u:"",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"OrRd",log:false},
- valor_suelo_med:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true},
+ valor_suelo_med:{lbl:"Valor fiscal del suelo (mediana, RAV 2022)",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,agg:"wmean",wt:"n_predios",sii:true,ramp:"YlOrRd",log:true},
  // --- tendencia de crecimiento urbano por tipo de uso (build_crecimiento_usos.py) ---
  m2u_tot:{lbl:"Stock construido — total",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"Viridis",log:true},
  m2u_res:{lbl:"Stock construido — habitacional",grp:"Crecimiento urbano por uso (Catastro SII)",u:"m²",dec:0,agg:"sum",sii:true,ramp:"PuBu",log:true},
@@ -83,7 +83,7 @@ const KPI={
  avaluo_total:{lbl:"Avalúo fiscal total",grp:"Avalúo fiscal (Catastro SII)",u:"millones CLP",dec:0,agg:"sum",sii:true,ramp:"Greens",log:true},
  avaluo_pp:{lbl:"Avalúo fiscal per cápita",grp:"Avalúo fiscal (Catastro SII)",u:"CLP/hab",dec:0,agg:"wmean",wt:"pob_2024",sii:true,ramp:"Greens",log:true},
  pct_exento:{lbl:"Avalúo exento (sin contribuciones)",grp:"Avalúo fiscal (Catastro SII)",u:"%",dec:1,agg:"wmean",wt:"avaluo_total",sii:true,ramp:"OrRd",log:false},
- valor_suelo:{lbl:"Valor de suelo mediano",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"},
+ valor_suelo:{lbl:"Valor fiscal del suelo (mediana, RAV 2022)",grp:"Uso de suelo (Catastro SII)",u:"CLP/m²",dec:0,ramp:"YlOrRd",log:true,cmpKey:"valor_suelo_med"},
  pct_tpub:{lbl:"Viajes al trabajo en transporte público",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"PuBu",log:false,cntKey:"viajes_tpub"},
  pct_auto:{lbl:"Viajes al trabajo en auto",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"OrRd",log:false,cntKey:"viajes_auto"},
  pct_camina:{lbl:"Viajes al trabajo a pie",grp:"Movilidad (Censo 2024)",u:"%",dec:1,agg:"wmean",wt:"ocup_modal",ramp:"Greens",log:false,cntKey:"viajes_camina"},
@@ -173,12 +173,12 @@ function titleCase(s){return (s||"").toLowerCase().replace(/(^|[\s\-\/])([a-zá�
    CARGA INICIAL
    ================================================================= */
 Promise.all([
- getJSON("data/kpis_comunas.json?v=16"),
+ getJSON("data/kpis_comunas.json?v=17"),
  getJSON("data/metro_areas.json"),
  getJSON("data/comunas.geojson?v=3"),
  getJSON("data/zonas_index.json?v=2").catch(()=>({slugs:[]})),
  getJSON("data/crecimiento_index.json?v=2").catch(()=>({slugs:[]})),
- getJSON("data/ranking_growth.json?v=2").catch(()=>({})),
+ getJSON("data/ranking_growth.json?v=3").catch(()=>({})),
  getJSON("data/intercensal_index.json?v=2").catch(()=>({slugs:[]}))
 ]).then(([kp,ma,geo,zi,ci,rg,ii])=>{
  S.kpis=kp.comunas; S.metros=ma.metros; S.comunasGeo=geo; S.rg=rg||{}; S.nseMeta=(kp.meta&&kp.meta.nse)||null;
@@ -199,7 +199,7 @@ Promise.all([
  document.getElementById("nt-sii").textContent=nSii;
  buildSelector(); buildComparador(); buildRegionNav(); buildRanking();
  // cobertura zonal (no bloquea; sólo para la nota de comunas omitidas)
- getJSON("data/zonas_cobertura.json?v=2").then(c=>{ZCOV=c;}).catch(()=>{});
+ getJSON("data/zonas_cobertura.json?v=3").then(c=>{ZCOV=c;}).catch(()=>{});
  // selección inicial desde la URL (enlace compartido) o Gran Concepción por defecto
  applyURL();
  });
@@ -396,7 +396,7 @@ function renderResumen(){const s=S.sel;
  // Política de vacíos: donde la fuente no tiene dato se muestra "s/d", no un valor imputado.
  h+='<div class="s" style="color:'+GREY+';font-size:.78rem;margin-top:.9rem;border-top:1px solid var(--bd,#e3e8ef);padding-top:.5rem">'+
     '<b>s/d</b> = la fuente no entrega el dato para esa comuna; se deja en blanco en vez de estimarlo. '+
-    'Casos conocidos: 13 comunas sin avalúo fiscal, 11 sin valor de suelo, 37 sin sector consolidado '+
+    'Casos conocidos: 13 comunas sin avalúo fiscal, 11 sin valor fiscal del suelo, 37 sin sector consolidado '+
     'y 10 sin pobreza CASEN (comunas aisladas o de muestra insuficiente).</div>';
  document.getElementById("res-kpis").innerHTML=h;
 }
@@ -518,7 +518,7 @@ function renderOferta(){const slug=dataSlug();
  mapEl.style.display="";note.style.display="";panel.style.display="";box.style.display="";emptyEl.style.display="none";
  ensureZMap();zOmitNote(slug);
  if(S.zonasCache[slug]){zFeats=S.zonasCache[slug];afterZonas();return;}
- getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
+ getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;zFeats=g.features;afterZonas();});
 }
 // nota de comunas omitidas (sin catastro enriquecido) y % de m² asignado
 function zOmitNote(slug){const cov=ZCOV[slug];const el=document.getElementById("z-omit");
@@ -641,7 +641,7 @@ function renderDinamica(){ensureIMap();
  else iData.zon=null;
  setIMode("com");
  if(hasZon&&!S.interCache[slug]){
-  getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{
+  getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{
    S.interCache[slug]=g; iData.zon=g; });}
  renderCrecimiento(slug);
  if(HAS_CREC[slug])loadDmap(slug); else document.getElementById("d-dmapbox").style.display="none";
@@ -654,7 +654,7 @@ function renderCrecimiento(slug){
   empty.innerHTML="<b>Análisis temporal en preparación para "+S.sel.name+".</b><br>Las series de construcción por año (personas vs. m², casa/depto, densificación/expansión) se generan con el pipeline SII por comuna. Disponible para el <b>Gran Concepción</b>.";return;}
  wrap.style.display="";empty.style.display="none";
  if(S.crecCache[slug]){drawCrec(S.crecCache[slug]);return;}
- getJSON("data/crecimiento/"+slug+".json?v=3").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
+ getJSON("data/crecimiento/"+slug+".json?v=4").then(D=>{S.crecCache[slug]=D;drawCrec(D);});
 }
 function drawCrec(D){
  // C1 índice base 2017
@@ -747,7 +747,7 @@ function loadDmap(slug){const box=document.getElementById("d-dmapbox");
    else box.style.display="none";};
  if(S.zonasCache[slug]){draw(S.zonasCache[slug]);return;}
  if(S.interCache[slug]){draw(S.interCache[slug]);return;}
- getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
+ getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;draw(g.features);})
   .catch(()=>{box.style.display="none";});}
 
 /* =================================================================
@@ -928,7 +928,7 @@ function ensureMktMap(){if(mktMap)return;
 function drawMktMap(slug){const box=document.getElementById("mkt-mapbox");
  if(!slug){box.style.display="none";return;}
  S.mktZcache=S.mktZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  const mzP=(slug in S.mktZcache)?Promise.resolve(S.mktZcache[slug]):getJSON("data/mercado/zonas/"+slug+".json?v=2").then(d=>{S.mktZcache[slug]=d;return d;}).catch(()=>{S.mktZcache[slug]=null;return null;});
  Promise.all([geoP,mzP]).then(([gf,d])=>{
   if(!d){box.style.display="none";return;}
@@ -987,7 +987,7 @@ function ecoSeries(){const s=S.sel;if(!s||!S.eco)return null;
  const av=sum("avaluo_mm"),ct=sum("contrib_mm"),np=sum("npred"),pj=ecoProj(av,t);
  return {t,avaluo:av,contrib:ct,npred:np,proj_t:pj.pt,proj:pj.pv,members:recs.map(r=>r.cut)};}
 function renderEconomia(){
- if(!ecoLoaded){getJSON("data/economia/comunas.json?v=6").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
+ if(!ecoLoaded){getJSON("data/economia/comunas.json?v=7").then(d=>{S.eco={};(d.comunas||[]).forEach(c=>S.eco[c.cut]=c);S.ecoMeta=d.meta;ecoLoaded=true;drawEco();})
    .catch(()=>{document.getElementById("eco-kpis").innerHTML='<div class="note">Serie económica no disponible.</div>';});return;}
  drawEco();}
 function drawEco(){const d=ecoSeries();
@@ -1050,8 +1050,8 @@ function ensureEcoMap(){if(ecoMap)return;
 function drawEcoMap(slug){const box=document.getElementById("eco-mapbox");
  if(!slug){box.style.display="none";return;}
  S.ecoZcache=S.ecoZcache||{};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
- const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=6").then(d=>{S.ecoZcache[slug]=d;return d;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const ecoP=S.ecoZcache[slug]?Promise.resolve(S.ecoZcache[slug]):getJSON("data/economia/zonas/"+slug+".json?v=7").then(d=>{S.ecoZcache[slug]=d;return d;});
  Promise.all([geoP,ecoP]).then(([gf,d])=>{
   const feats=gf.map(f=>{const za=String(f.properties.zona);
     return {type:"Feature",geometry:f.geometry,properties:{zona:za,comuna:f.properties.comuna,
@@ -1468,7 +1468,7 @@ function mvDrawMap(slug){const box=document.getElementById("mv-mapbox");
  if(!slug||!HAS_ZONAL[slug]){box.style.display="none";return;}
  const sel=document.getElementById("mv-sel");sel.value=mvKey;
  sel.onchange=()=>{mvKey=sel.value;mvDrawMap(slug);};
- const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=9").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
+ const geoP=S.zonasCache[slug]?Promise.resolve(S.zonasCache[slug]):getJSON("data/zonas/"+slug+".geojson?v=10").then(g=>{S.zonasCache[slug]=g.features;return g.features;});
  geoP.then(gf=>{
   if(!gf.some(f=>f.properties.mv_tpub!=null)){box.style.display="none";return;}
   box.style.display="";ensureMvMap();
@@ -1651,7 +1651,7 @@ function cmpTendInit(){
 function cmpTendLoad(){
  if(S.usos)return Promise.resolve(S.usos);
  if(S.usosP)return S.usosP;
- S.usosP=getJSON("data/crecimiento/usos_comuna.json?v=2").then(d=>{S.usos=d;
+ S.usosP=getJSON("data/crecimiento/usos_comuna.json?v=3").then(d=>{S.usos=d;
    if(d&&d.anios&&d.anios.length)ANIO_STOCK=d.anios[d.anios.length-1];
    return d;}).catch(()=>{S.usos=null;return null;});
  return S.usosP;
@@ -1896,7 +1896,7 @@ const RANKDIMS=[
  {g:"Uso de suelo y servicios",k:"m2pp_deporte",src:"k",dir:"desc",lbl:"Mejor disponibilidad de deporte y recreación"},
  {g:"Uso de suelo y servicios",k:"m2pp_tot",src:"k",dir:"desc",lbl:"Más suelo construido por habitante"},
  {g:"Uso de suelo y servicios",k:"pct_8pisos",src:"k",dir:"desc",lbl:"Más verticalizadas (predios 8+ pisos)"},
- {g:"Uso de suelo y servicios",k:"valor_suelo_med",src:"k",dir:"desc",lbl:"Suelo más caro"},
+ {g:"Uso de suelo y servicios",k:"valor_suelo_med",src:"k",dir:"desc",lbl:"Mayor valor fiscal del suelo"},
  {g:"Avalúo fiscal (SII)",k:"avaluo_total",src:"k",dir:"desc",lbl:"Mayor avalúo fiscal total"},
  {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"desc",lbl:"Mayor avalúo fiscal per cápita"},
  {g:"Avalúo fiscal (SII)",k:"avaluo_pp",src:"k",dir:"asc",lbl:"Menor avalúo fiscal per cápita"},
